@@ -544,7 +544,7 @@ public class TaskScheduler {
      *
      * @param action Action that has finished
      */
-    public final void actionCompleted(AllocatableAction action) {
+    public void actionCompleted(AllocatableAction action) {
         LOGGER.info("[TaskScheduler] Action completed " + action);
         ResourceScheduler<? extends WorkerResourceDescription> resource = action.getAssignedResource();
         List<AllocatableAction> resourceFreeActions = actionFinished(action);
