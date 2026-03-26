@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package es.bsc.compss.scheduler.prediction;
+package es.bsc.compss.scheduler.prediction.base;
 
 import java.util.ArrayList;
 import java.util.Collections;

@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package es.bsc.compss.scheduler.prediction;
+package es.bsc.compss.scheduler.prediction.base;
 
 import es.bsc.compss.components.impl.ResourceScheduler;
 import es.bsc.compss.scheduler.types.Profile;

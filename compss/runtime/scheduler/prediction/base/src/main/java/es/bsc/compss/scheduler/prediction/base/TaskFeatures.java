@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package es.bsc.compss.scheduler.prediction;
+package es.bsc.compss.scheduler.prediction.base;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 
 /**
@@ -104,7 +105,7 @@ public class TaskFeatures {
      * @return Hex-encoded SHA-256 digest string.
      */
     public String categoricalHash() {
-        String sorted = new TreeMap<>(categoricalFeatures).toString();
+        String sorted = new TreeSet(categoricalFeatures.keySet()).toString();
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(sorted.getBytes(StandardCharsets.UTF_8));

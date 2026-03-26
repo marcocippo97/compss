@@ -36,5 +36,6 @@
         <module>fullgraph</module>
         <module>orderstrict</module>
         <module>lookahead</module>
+        <module>prediction</module>
     </modules>
 </project>

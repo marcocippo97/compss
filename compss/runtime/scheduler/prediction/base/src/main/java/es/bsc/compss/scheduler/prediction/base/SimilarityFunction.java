@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package es.bsc.compss.scheduler.prediction;
+package es.bsc.compss.scheduler.prediction.base;
 
 /**
  * Pluggable strategy for computing the similarity between two tasks, identified by their unique runtime IDs.

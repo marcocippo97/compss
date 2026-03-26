@@ -20,23 +20,23 @@ import es.bsc.compss.components.impl.ResourceScheduler;
 import es.bsc.compss.components.impl.TaskScheduler;
 import es.bsc.compss.scheduler.exceptions.BlockedActionException;
 import es.bsc.compss.scheduler.exceptions.UnassignedActionException;
-import es.bsc.compss.scheduler.prediction.SimilarityEngine;
-import es.bsc.compss.scheduler.prediction.SimilarityFunction;
-import es.bsc.compss.scheduler.prediction.SuccessorHint;
-import es.bsc.compss.scheduler.prediction.TaskFeatures;
-import es.bsc.compss.scheduler.prediction.TaskGraphCache;
-import es.bsc.compss.scheduler.prediction.WLSimilarityFunction;
+import es.bsc.compss.scheduler.prediction.base.SimilarityEngine;
+import es.bsc.compss.scheduler.prediction.base.SimilarityFunction;
+import es.bsc.compss.scheduler.prediction.base.SuccessorHint;
+import es.bsc.compss.scheduler.prediction.base.TaskFeatures;
+import es.bsc.compss.scheduler.prediction.base.TaskGraphCache;
+import es.bsc.compss.scheduler.prediction.base.WLSimilarityFunction;
 import es.bsc.compss.scheduler.types.ActionOrchestrator;
 import es.bsc.compss.scheduler.types.AllocatableAction;
 import es.bsc.compss.scheduler.types.ObjectValue;
 import es.bsc.compss.scheduler.types.Profile;
-import es.bsc.compss.scheduler.types.SchedulingInformation;
 import es.bsc.compss.scheduler.types.Score;
 import es.bsc.compss.types.allocatableactions.ExecutionAction;
-import es.bsc.compss.types.parameter.Parameter;
-import es.bsc.compss.types.resources.Worker;
+import es.bsc.compss.types.parameter.impl.BasicTypeParameter;
+import es.bsc.compss.types.parameter.impl.CollectiveParameter;
+import es.bsc.compss.types.parameter.impl.FileParameter;
+import es.bsc.compss.types.parameter.impl.Parameter;
 import es.bsc.compss.types.resources.WorkerResourceDescription;
-import es.bsc.compss.util.CoreManager;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -49,8 +49,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
-
-import org.json.JSONObject;
 
 
 /**
@@ -200,7 +198,7 @@ public class PredictionTS extends TaskScheduler {
      */
     // @Override
     // public <T extends WorkerResourceDescription> ResourceScheduler<T> generateSchedulerForResource(Worker<T> w,
-    //     JSONObject defaultResources, JSONObject defaultImplementations);
+    // JSONObject defaultResources, JSONObject defaultImplementations);
 
     // TODO: override generateSchedulingInformation to return PredictionSchedulingInformation
     // once the hint-transfer flow is fully integrated.
@@ -228,23 +226,41 @@ public class PredictionTS extends TaskScheduler {
      * steps 1–3 and are forwarded directly to {@code super}.
      */
     @Override
-    public final void scheduleAction(AllocatableAction action, Score actionScore) {
+    public final void scheduleAction(AllocatableAction action, Score actionScore) throws BlockedActionException {
         // Only execution actions carry task features and are relevant for similarity matching
         if (action instanceof ExecutionAction) {
-            int coreId = action.getCoreId();
 
-            // Categorical and Numerical features:
-            Map<String, String> categorical = new HashMap<>(); //TODO maybe this should be made a list
+            ExecutionAction execAction = (ExecutionAction) action;
+            int coreId = execAction.getCoreId();
+
+            // Build categorical features from task and parameter names.
+            Map<String, String> categorical = new HashMap<>(); // TODO maybe this should be made a set
             Map<String, double[]> numerical = new HashMap<>();
 
-            // Build categorical features from the core element identifier.
-            categorical.put("task_name", action.task.getTaskDescription().getName());
-            List<Parameter> parameters = action.task.getParameters();
-            Integer counter = 0;
-            for (Parameter p : parameters){
-                categorical.put("param_" + counter.toString(), p.getName());
-                if (!p.isPotentialDependency()){
+            categorical.put("task_name", execAction.getTask().getTaskDescription().getName());
+            List<? extends Parameter> parameters = execAction.getTask().getParameters();
+            int counter = 1;
 
+            for (Parameter p : parameters) {
+                categorical.put("param" + counter, p.getName());
+                counter++;
+
+                if (!p.isPotentialDependency()) {
+                    if (p instanceof BasicTypeParameter) {
+                        BasicTypeParameter sp = (BasicTypeParameter) p;
+                        if (sp.getValue() instanceof Number) {
+
+                            double[] spNumArray = new double[] { ((Number) sp.getValue()).doubleValue() };
+                            numerical.put(sp.getName(), spNumArray);
+                        }
+                    } else if (p instanceof CollectiveParameter) {
+
+                        double[] spNumArray = new double[] { (double) ((CollectiveParameter) p).getElements().size() };
+                        numerical.put(p.getName(), spNumArray);
+
+                    } else if (p instanceof FileParameter) {
+                        ;// TODO to insert a method to retrieve file size
+                    }
                 }
             }
 
@@ -252,21 +268,21 @@ public class PredictionTS extends TaskScheduler {
 
             // Collect predecessor IDs from actions already registered in the cache.
             List<Long> predecessorIds = new ArrayList<>();
-            for (AllocatableAction pred : action.getDataPredecessors()) {
+            for (AllocatableAction pred : execAction.getDataPredecessors()) {
                 predecessorIds.add(pred.getId());
             }
 
-            taskGraphCache.registerTask(action.getId(), features, predecessorIds);
-            taskIdToAction.put(action.getId(), action);
+            taskGraphCache.registerTask(execAction.getId(), features, predecessorIds);
+            taskIdToAction.put(execAction.getId(), execAction);
 
             // Update the feature index with this node's numerical features.
-            similarityEngine.updateFeatureSpace(action.getId());
+            similarityEngine.updateFeatureSpace(execAction.getId());
 
             // Evaluate similarity and generate hints before adding to the window.
-            evaluateSimilarityAndBuildHints(action);
+            evaluateSimilarityAndBuildHints(execAction);
 
             // Add to window after evaluation to prevent self-comparison.
-            addToRecentWindow(action);
+            addToRecentWindow(execAction);
         }
 
         if (!action.hasDataPredecessors()) {
@@ -410,6 +426,7 @@ public class PredictionTS extends TaskScheduler {
 
                 // Sort completed successors by descending average execution time (LJF order)
                 // and assign rank 0, 1, 2, … so the longest task enters the queue first.
+                // TODO this will probably not distinguish between same-named tasks with different params
                 completedSuccessors.sort(Comparator
                     .comparingLong((TaskGraphCache.NodeInfo s) -> s.executionProfile.getAverageExecutionTime())
                     .reversed());
@@ -509,6 +526,7 @@ public class PredictionTS extends TaskScheduler {
             AllocatableAction hintPredecessor = null;
 
             // Search predecessors for a hint whose coreId matches this action.
+            // TODO it seems that no action has data predecessors at this stage
             for (AllocatableAction predecessor : freeAction.getDataPredecessors()) {
                 List<SuccessorHint> hints = successorHintMap.get(predecessor);
                 if (hints == null) {
