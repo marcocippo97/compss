@@ -233,4 +233,25 @@ public class TaskGraphCache {
         }
         return result;
     }
+
+    /**
+     * Returns the {@link NodeInfo} objects of the direct predecessors of {@code rootId} (one hop backward).
+     *
+     * @param rootId Starting task ID.
+     * @return List of NodeInfo objects for all direct predecessors; empty if none are found.
+     */
+    public synchronized List<NodeInfo> getPredecessors(long rootId) {
+        List<NodeInfo> result = new ArrayList<>();
+        NodeInfo node = cache.get(rootId);
+        if (node == null) {
+            return result;
+        }
+        for (Long predId : node.predecessorIds) {
+            NodeInfo pred = cache.get(predId);
+            if (pred != null) {
+                result.add(pred);
+            }
+        }
+        return result;
+    }
 }

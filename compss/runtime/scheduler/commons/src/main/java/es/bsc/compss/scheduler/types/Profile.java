@@ -52,6 +52,7 @@ public class Profile {
     private long fetchedDataTS;
     private long executionStartTS;
     private long executionEndTS;
+    private long lastExecutionTime;
     private long endNotificationTS;
     private long endTS;
 
@@ -162,6 +163,7 @@ public class Profile {
      */
     public final void setExecutionEndTime(long ts) {
         this.executionEndTS = ts;
+        this.lastExecutionTime = this.executionEndTS - this.executionStartTS;
     }
 
     /**
@@ -272,6 +274,13 @@ public class Profile {
      */
     public void setAvgTime(long averageTime) {
         this.averageTime = averageTime;
+    }
+
+    /**
+     * Gets the last execution time.
+     */
+    public long getExecutionTime() {
+        return this.lastExecutionTime;
     }
 
     /**

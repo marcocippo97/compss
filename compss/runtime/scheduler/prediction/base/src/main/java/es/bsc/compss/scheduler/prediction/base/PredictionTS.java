@@ -20,6 +20,7 @@ import es.bsc.compss.components.impl.ResourceScheduler;
 import es.bsc.compss.components.impl.TaskScheduler;
 import es.bsc.compss.scheduler.exceptions.BlockedActionException;
 import es.bsc.compss.scheduler.exceptions.UnassignedActionException;
+import es.bsc.compss.scheduler.prediction.base.PredictionSchedulingOptimizer;
 import es.bsc.compss.scheduler.prediction.base.SimilarityEngine;
 import es.bsc.compss.scheduler.prediction.base.SimilarityFunction;
 import es.bsc.compss.scheduler.prediction.base.SuccessorHint;
@@ -37,6 +38,7 @@ import es.bsc.compss.types.parameter.impl.CollectiveParameter;
 import es.bsc.compss.types.parameter.impl.FileParameter;
 import es.bsc.compss.types.parameter.impl.Parameter;
 import es.bsc.compss.types.resources.WorkerResourceDescription;
+import es.bsc.compss.worker.COMPSsException;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -44,7 +46,6 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -95,12 +96,6 @@ public class PredictionTS extends TaskScheduler {
      * ignored.
      */
     private static final double SIMILARITY_THRESHOLD = 0.7;
-
-    /**
-     * Maximum time in milliseconds that a deferred action waits for a lower-ranked sibling before being submitted
-     * unconditionally to prevent starvation.
-     */
-    private static final long DEFER_TIMEOUT_MS = 100L;
 
     // -------------------------------------------------------------------------
     // Order-strict scheduler fields
@@ -163,7 +158,7 @@ public class PredictionTS extends TaskScheduler {
      * Actions that have been deferred because a lower-ranked sibling has not yet appeared. Maps deferred action to the
      * timestamp (in ms) at which it was deferred. Actions are released unconditionally after {@link #DEFER_TIMEOUT_MS}.
      */
-    private final Map<AllocatableAction, Long> deferredActions = new HashMap<>();
+    public final Map<AllocatableAction, Long> deferredActions = new HashMap<>();
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -188,17 +183,6 @@ public class PredictionTS extends TaskScheduler {
         this.similarityFunction =
             new WLSimilarityFunction(taskGraphCache, similarityEngine, /* hops */ 2, /* r */ 0.8, /* alpha */ 0.0);
     }
-
-    // -------------------------------------------------------------------------
-    // Task scheduler structure generators
-    // -------------------------------------------------------------------------
-
-    /**
-     * Subclasses must provide the concrete ResourceScheduler factory.
-     */
-    // @Override
-    // public <T extends WorkerResourceDescription> ResourceScheduler<T> generateSchedulerForResource(Worker<T> w,
-    // JSONObject defaultResources, JSONObject defaultImplementations);
 
     // TODO: override generateSchedulingInformation to return PredictionSchedulingInformation
     // once the hint-transfer flow is fully integrated.
@@ -234,7 +218,7 @@ public class PredictionTS extends TaskScheduler {
             int coreId = execAction.getCoreId();
 
             // Build categorical features from task and parameter names.
-            Map<String, String> categorical = new HashMap<>(); // TODO maybe this should be made a set
+            Map<String, String> categorical = new HashMap<>();
             Map<String, double[]> numerical = new HashMap<>();
 
             categorical.put("task_name", execAction.getTask().getTaskDescription().getName());
@@ -268,6 +252,7 @@ public class PredictionTS extends TaskScheduler {
 
             // Collect predecessor IDs from actions already registered in the cache.
             List<Long> predecessorIds = new ArrayList<>();
+            // TODO if a synchronization point is set in the graph, the dependency relation is lost
             for (AllocatableAction pred : execAction.getDataPredecessors()) {
                 predecessorIds.add(pred.getId());
             }
@@ -282,7 +267,11 @@ public class PredictionTS extends TaskScheduler {
             evaluateSimilarityAndBuildHints(execAction);
 
             // Add to window after evaluation to prevent self-comparison.
-            addToRecentWindow(execAction);
+            if (recentTaskWindow.size() >= MAX_RECENT_WINDOW_SIZE) {
+                AllocatableAction evicted = recentTaskWindow.pollFirst();
+                successorHintMap.remove(evicted);
+            }
+            recentTaskWindow.addLast(execAction);
         }
 
         if (!action.hasDataPredecessors()) {
@@ -304,10 +293,6 @@ public class PredictionTS extends TaskScheduler {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Completion callback: deferred hint creation
-    // -------------------------------------------------------------------------
-
     /**
      * Called when an action has finished executing. Updates the {@link TaskGraphCache} with the assigned resource and
      * execution profile, then processes any pending hint requests that were registered while the node was still
@@ -319,9 +304,11 @@ public class PredictionTS extends TaskScheduler {
      */
     @Override
     public void actionCompleted(AllocatableAction action) {
+
         if (action.getCoreId() != null) {
             ResourceScheduler<?> rs = action.getAssignedResource();
-            Profile profile = rs.getProfile(action.getAssignedImplementation());
+            // Profile profile = rs.getProfile(action.getAssignedImplementation());
+            Profile profile = action.getProfile();
 
             Map<Long, Double> pending = taskGraphCache.updateOnCompletion(action.getId(), rs, profile);
 
@@ -341,25 +328,6 @@ public class PredictionTS extends TaskScheduler {
             }
         }
         super.actionCompleted(action);
-    }
-
-    // -------------------------------------------------------------------------
-    // Sliding window maintenance
-    // -------------------------------------------------------------------------
-
-    /**
-     * Adds an action to the tail of the recent-task sliding window. If the window has reached
-     * {@link #MAX_RECENT_WINDOW_SIZE}, the oldest entry is evicted from the head and its entry is also removed from
-     * {@code successorHintMap} to prevent unbounded memory growth.
-     *
-     * @param action Execution action to add.
-     */
-    private void addToRecentWindow(AllocatableAction action) {
-        if (recentTaskWindow.size() >= MAX_RECENT_WINDOW_SIZE) {
-            AllocatableAction evicted = recentTaskWindow.pollFirst();
-            successorHintMap.remove(evicted);
-        }
-        recentTaskWindow.addLast(action);
     }
 
     // -------------------------------------------------------------------------
@@ -386,11 +354,12 @@ public class PredictionTS extends TaskScheduler {
             return;
         }
         int depthNew = newInfo.depth;
+        Set<Long> newPredSet = new HashSet<>(newInfo.predecessorIds);
 
         for (AllocatableAction taskOld : recentTaskWindow) {
 
-            // Rule 1: skip direct predecessors.
-            if (taskNew.getDataPredecessors().contains(taskOld)) {
+            // Rule 1: skip direct predecessors of taskNew.
+            if (newInfo.predecessorIds.contains(taskOld.getId())) {
                 continue;
             }
 
@@ -400,6 +369,12 @@ public class PredictionTS extends TaskScheduler {
                 continue;
             }
             if (Math.abs(oldInfo.depth - depthNew) > DEPTH_WINDOW) {
+                continue;
+            }
+
+            // Rule 3: skip siblings (same non-empty predecessor set).
+            Set<Long> oldPredSet = new HashSet<>(oldInfo.predecessorIds);
+            if (!newPredSet.isEmpty() && newPredSet.equals(oldPredSet)) {
                 continue;
             }
 
@@ -426,10 +401,10 @@ public class PredictionTS extends TaskScheduler {
 
                 // Sort completed successors by descending average execution time (LJF order)
                 // and assign rank 0, 1, 2, … so the longest task enters the queue first.
-                // TODO this will probably not distinguish between same-named tasks with different params
-                completedSuccessors.sort(Comparator
-                    .comparingLong((TaskGraphCache.NodeInfo s) -> s.executionProfile.getAverageExecutionTime())
-                    .reversed());
+                // TODO getExecutionTime() doesn't retrieve the right time
+                Comparator<TaskGraphCache.NodeInfo> comparator =
+                    Comparator.comparingLong(s -> s.executionProfile.getExecutionTime());
+                completedSuccessors.sort(comparator.reversed());
 
                 for (int rankIdx = 0; rankIdx < completedSuccessors.size(); rankIdx++) {
                     TaskGraphCache.NodeInfo succ = completedSuccessors.get(rankIdx);
@@ -497,27 +472,13 @@ public class PredictionTS extends TaskScheduler {
      * predecessor's entry in {@code successorHintMap} is removed once all its hints have been consumed.
      */
     @Override
-    public final <T extends WorkerResourceDescription> void handleDependencyFreeActions(
+    protected <T extends WorkerResourceDescription> void handleDependencyFreeActions(
         List<AllocatableAction> dataFreeActions, List<AllocatableAction> resourceFreeActions,
         List<AllocatableAction> blockedCandidates, ResourceScheduler<T> resource) {
 
         manageUpgradedActions(resource);
 
         PriorityQueue<ObjectValue<AllocatableAction>> executableActions = new PriorityQueue<>();
-
-        // Release deferred actions that have exceeded the timeout.
-        // TODO put this in SchedulingOptimizer
-        long now = System.currentTimeMillis();
-        Iterator<Map.Entry<AllocatableAction, Long>> deferIter = deferredActions.entrySet().iterator();
-        while (deferIter.hasNext()) {
-            Map.Entry<AllocatableAction, Long> entry = deferIter.next();
-            if (now - entry.getValue() >= DEFER_TIMEOUT_MS) {
-                LOGGER.debug("[PredictionTS] Deferred action released by timeout: " + entry.getKey());
-                Score actionScore = generateActionScore(entry.getKey());
-                executableActions.add(new ObjectValue<>(entry.getKey(), actionScore));
-                deferIter.remove();
-            }
-        }
 
         // Process newly data-free actions.
         for (AllocatableAction freeAction : dataFreeActions) {
@@ -526,8 +487,9 @@ public class PredictionTS extends TaskScheduler {
             AllocatableAction hintPredecessor = null;
 
             // Search predecessors for a hint whose coreId matches this action.
-            // TODO it seems that no action has data predecessors at this stage
-            for (AllocatableAction predecessor : freeAction.getDataPredecessors()) {
+            for (TaskGraphCache.NodeInfo predTask : taskGraphCache.getPredecessors(freeAction.getId())) {
+
+                AllocatableAction predecessor = taskIdToAction.get(predTask.taskId);
                 List<SuccessorHint> hints = successorHintMap.get(predecessor);
                 if (hints == null) {
                     continue;
@@ -565,7 +527,7 @@ public class PredictionTS extends TaskScheduler {
                         + freeAction);
                 } else {
                     // A higher-priority sibling is expected: defer this action.
-                    deferredActions.put(freeAction, now);
+                    deferredActions.put(freeAction, System.currentTimeMillis());
                     LOGGER.debug("[PredictionTS] Hint rank " + freeActionRank
                         + " deferred — awaiting lower-ranked sibling: " + freeAction);
                 }
@@ -606,8 +568,7 @@ public class PredictionTS extends TaskScheduler {
 
             AllocatableAction aa = topPriority.getObject();
             try {
-                aa.schedule(topPriority.getScore());
-                tryToLaunch(aa);
+                scheduleAndLaunchAction(aa, topPriority.getScore());
 
                 if (topPriority == topReadyQueue) {
                     readyQueue.poll();
@@ -628,5 +589,24 @@ public class PredictionTS extends TaskScheduler {
         if (!executableActions.isEmpty()) {
             readyQueue.addAll(executableActions);
         }
+    }
+
+    /**
+     * schedules and tries to launch an action.
+     */
+    public final void scheduleAndLaunchAction(AllocatableAction aa, Score score)
+        throws BlockedActionException, UnassignedActionException {
+
+        aa.schedule(score);
+        tryToLaunch(aa);
+    }
+
+    /**
+     * generate a new PredictionSchedulingOptimizer.
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public PredictionSchedulingOptimizer generateSchedulingOptimizer() {
+        return (PredictionSchedulingOptimizer) new PredictionSchedulingOptimizer(this);
     }
 }

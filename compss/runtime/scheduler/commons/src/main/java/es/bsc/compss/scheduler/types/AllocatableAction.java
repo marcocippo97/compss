@@ -610,6 +610,16 @@ public abstract class AllocatableAction {
     }
 
     /**
+     * Get the profile.
+     */
+    public final Profile getProfile() {
+        if (this.profile == null) {
+            return null;
+        }
+        return profile;
+    }
+
+    /**
      * Assigns an implementation to the Allocatable Action.
      *
      * @param impl Implementation to assign.

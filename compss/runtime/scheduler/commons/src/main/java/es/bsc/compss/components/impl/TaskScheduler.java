@@ -60,7 +60,6 @@ import es.bsc.compss.worker.COMPSsException;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -80,7 +79,7 @@ import org.json.JSONObject;
 public class TaskScheduler {
 
     // Logger
-    protected static final Logger LOGGER = LogManager.getLogger(Loggers.TS_COMP);
+    public static final Logger LOGGER = LogManager.getLogger(Loggers.TS_COMP);
 
     // Data Provenance logger
     private static final Logger DP_LOGGER = LogManager.getLogger(Loggers.DATA_PROVENANCE);
@@ -453,7 +452,7 @@ public class TaskScheduler {
      *
      * @param action Action to be scheduled.
      */
-    public final void newAllocatableAction(AllocatableAction ) {
+    public final void newAllocatableAction(AllocatableAction action) {
         LOGGER.info("[TaskScheduler] Registering new AllocatableAction " + action);
         if (!action.hasDataPredecessors() && !action.hasStreamProducers()) {
             addToReady(action);

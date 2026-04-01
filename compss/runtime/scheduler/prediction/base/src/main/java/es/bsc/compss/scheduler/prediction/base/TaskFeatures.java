@@ -46,9 +46,9 @@ public class TaskFeatures {
      * @param numerical Map of numerical feature names to raw double arrays.
      */
     public TaskFeatures(int coreElementId, Map<String, String> categorical, Map<String, double[]> numerical) {
-        this.coreElementId = coreElementId;
         this.categoricalFeatures = Collections.unmodifiableMap(new HashMap<>(categorical));
         this.numericalFeatures = Collections.unmodifiableMap(new HashMap<>(numerical));
+        this.coreElementId = coreElementId;
     }
 
     /**
