@@ -147,7 +147,7 @@ public class AccessProcessor extends RequestDispatcher<APRequest> implements Che
      */
     public int newTask(Application app, TaskMonitor monitor, Lang lang, String signature, boolean isPrioritary,
         int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed,
-        boolean hasTarget, int numReturns, List<Parameter> parameters, OnFailure onFailure, long timeOut) {
+        boolean hasTarget, int numReturns, List<Parameter> parameters, OnFailure onFailure, long timeOut, int rank) {
 
         Task currentTask;
 
@@ -158,11 +158,11 @@ public class AccessProcessor extends RequestDispatcher<APRequest> implements Che
             } else {
                 ErrorManager.warn("Requesting to create task with chunk_size smaller than 2. Executing as simple task");
                 currentTask = new Task(app, lang, signature, isPrioritary, numNodes, isReduce, isReplicated,
-                    isDistributed, hasTarget, numReturns, parameters, monitor, onFailure, timeOut);
+                    isDistributed, hasTarget, numReturns, parameters, monitor, onFailure, timeOut, rank);
             }
         } else {
             currentTask = new Task(app, lang, signature, isPrioritary, numNodes, isReduce, isReplicated, isDistributed,
-                hasTarget, numReturns, parameters, monitor, onFailure, timeOut);
+                hasTarget, numReturns, parameters, monitor, onFailure, timeOut, rank);
         }
 
         app.onTaskCreation(currentTask);
@@ -187,10 +187,10 @@ public class AccessProcessor extends RequestDispatcher<APRequest> implements Che
      */
     public int newTask(Application app, TaskMonitor monitor, String declareMethodFullyQualifiedName, boolean priority,
         boolean isReduce, int reduceChunkSize, boolean hasTarget, int numReturns, List<Parameter> parameters,
-        OnFailure onFailure, long timeOut) {
+        OnFailure onFailure, long timeOut, int rank) {
 
         Task currentTask = new Task(app, declareMethodFullyQualifiedName, priority, hasTarget, numReturns, parameters,
-            monitor, onFailure, timeOut);
+            monitor, onFailure, timeOut, rank);
 
         app.onTaskCreation(currentTask);
 

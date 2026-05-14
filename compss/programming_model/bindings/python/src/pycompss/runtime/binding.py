@@ -896,6 +896,7 @@ def process_task(
         distributed = decorator_arguments.is_distributed
         on_failure = decorator_arguments.on_failure
         time_out = decorator_arguments.time_out
+        rank = decorator_arguments.rank
         if __debug__:
             # Log the task submission values for debugging purposes.
             values_str = " ".join(str(v) for v in values)
@@ -992,6 +993,7 @@ def process_task(
                 distributed,
                 has_target,
                 num_returns,
+                rank,
                 values,
                 names,
                 compss_types,
@@ -1000,7 +1002,7 @@ def process_task(
                 compss_prefixes,
                 content_types,
                 weights,
-                keep_renames,
+                keep_renames
             )
         else:
             COMPSs.process_http_task(

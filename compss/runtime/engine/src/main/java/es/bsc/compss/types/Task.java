@@ -72,14 +72,18 @@ public class Task extends AbstractTask {
     // Flag to check if it was previously submitted. INOUT read reference could be
     private boolean submitted;
 
+    // Rank for scheduler
+    private int rank;
+
 
     private Task(Application app, TaskMonitor monitor, TaskType type, Lang lang, String signature, boolean isPrioritary,
         int numNodes, boolean isReduction, boolean isReplicated, boolean isDistributed, OnFailure onFailure,
-        long timeOut, boolean hasTarget, int numReturns, List<Parameter> parameters) {
+        long timeOut, boolean hasTarget, int numReturns, List<Parameter> parameters, int rank) {
         super(app, nextTaskId.getAndIncrement());
         this.taskMonitor = monitor;
         this.commutativeGroup = new TreeMap<>();
         this.taskGroups = new LinkedList<>();
+        this.rank = rank;
 
         CoreElement core = CoreManager.getCore(signature);
         String parallelismSource = app.getParallelismSource();
@@ -105,10 +109,11 @@ public class Task extends AbstractTask {
      * @param monitor Task monitor.
      * @param onFailure On failure mechanisms.
      * @param timeOut Time for a task time out.
+     * @param rank Rank for the scheduler.
      */
     public Task(Application app, Lang lang, String signature, boolean isPrioritary, int numNodes, boolean isReduction,
         boolean isReplicated, boolean isDistributed, boolean hasTarget, int numReturns, List<Parameter> parameters,
-        TaskMonitor monitor, OnFailure onFailure, long timeOut) {
+        TaskMonitor monitor, OnFailure onFailure, long timeOut, int rank) {
 
         this(app, monitor,
             // Taks type
@@ -118,7 +123,7 @@ public class Task extends AbstractTask {
             // Scheduler hints
             isPrioritary, numNodes, isReduction, isReplicated, isDistributed, onFailure, timeOut,
             // Parameters
-            hasTarget, numReturns, parameters);
+            hasTarget, numReturns, parameters, rank);
 
     }
 
@@ -135,7 +140,7 @@ public class Task extends AbstractTask {
      * @param timeOut Time for a task timeOut.
      */
     public Task(Application app, String declareMethodFullyQualifiedName, boolean isPrioritary, boolean hasTarget,
-        int numReturns, List<Parameter> parameters, TaskMonitor monitor, OnFailure onFailure, long timeOut) {
+        int numReturns, List<Parameter> parameters, TaskMonitor monitor, OnFailure onFailure, long timeOut, int rank) {
 
         this(app, monitor,
             // Task type
@@ -145,8 +150,15 @@ public class Task extends AbstractTask {
             // Scheduler hints
             isPrioritary, Constants.SINGLE_NODE, false, false, false, onFailure, timeOut,
             // Parameters
-            hasTarget, numReturns, parameters);
+            hasTarget, numReturns, parameters, rank);
 
+    }
+
+    /**
+     * Get the task rank.
+     */
+    public int getRank() {
+        return this.rank;
     }
 
     /**

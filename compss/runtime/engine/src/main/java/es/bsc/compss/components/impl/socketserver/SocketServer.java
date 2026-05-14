@@ -331,13 +331,13 @@ public class SocketServer extends Server {
                     runtime.executeTask(this.appId, cmd.getSignature(), cmd.getOnFailure(), cmd.getTimeOut(),
                         cmd.getPrioritary(), cmd.getNumNodes(), cmd.isReduce(), cmd.getReduceChunkSize(),
                         cmd.isReplicated(), cmd.isDistributed(), cmd.hasTarget(), cmd.getNumReturns(),
-                        cmd.getParameterCount(), cmd.getParameters());
+                        cmd.getParameterCount(), 0, cmd.getParameters());
                     break;
                 case CLASS_METHOD:
                     runtime.executeTask(this.appId, cmd.getMethodClass(), cmd.getOnFailure(), cmd.getTimeOut(),
                         cmd.getMethodName(), cmd.getPrioritary(), cmd.getNumNodes(), cmd.isReduce(),
                         cmd.getReduceChunkSize(), cmd.isReplicated(), cmd.isDistributed(), cmd.hasTarget(),
-                        cmd.getNumReturns(), cmd.getParameterCount(), cmd.getParameters());
+                        cmd.getNumReturns(), cmd.getParameterCount(), 0, cmd.getParameters());
                     break;
                 default:
                     LOGGER.warn("Unsupported nested task entry point {}", cmd.getEntryPoint());

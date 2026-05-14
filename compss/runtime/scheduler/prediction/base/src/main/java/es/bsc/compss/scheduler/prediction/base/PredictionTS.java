@@ -38,7 +38,6 @@ import es.bsc.compss.types.parameter.impl.CollectiveParameter;
 import es.bsc.compss.types.parameter.impl.FileParameter;
 import es.bsc.compss.types.parameter.impl.Parameter;
 import es.bsc.compss.types.resources.WorkerResourceDescription;
-import es.bsc.compss.worker.COMPSsException;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -50,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -158,7 +158,7 @@ public class PredictionTS extends TaskScheduler {
      * Actions that have been deferred because a lower-ranked sibling has not yet appeared. Maps deferred action to the
      * timestamp (in ms) at which it was deferred. Actions are released unconditionally after {@link #DEFER_TIMEOUT_MS}.
      */
-    public final Map<AllocatableAction, Long> deferredActions = new HashMap<>();
+    final Map<AllocatableAction, Long> deferredActions = new ConcurrentHashMap<>();
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -462,6 +462,17 @@ public class PredictionTS extends TaskScheduler {
     }
 
     /**
+     * Returns the set of predecessor task IDs for the given action as recorded in the {@link TaskGraphCache}.
+     */
+    private Set<Long> getPredecessorIds(AllocatableAction action) {
+        Set<Long> predIds = new HashSet<>();
+        for (TaskGraphCache.NodeInfo pred : taskGraphCache.getPredecessors(action.getId())) {
+            predIds.add(pred.taskId);
+        }
+        return predIds;
+    }
+
+    /**
      * Handles tasks that have just become free of data or resource dependencies. For each newly data-free action the
      * method first checks whether the action has a matching {@link SuccessorHint} in {@code successorHintMap}: - If the
      * hint's {@link SuccessorHint#getRank()} is the lowest among all unconsumed sibling hints for the same predecessor,
@@ -545,9 +556,75 @@ public class PredictionTS extends TaskScheduler {
                 }
 
             } else {
-                // No hint available: schedule immediately using default logic.
-                Score actionScore = generateActionScore(freeAction);
-                executableActions.add(new ObjectValue<>(freeAction, actionScore));
+                // No hint available: fall back to Task-rank-based sibling ordering
+                // for ExecutionActions whose rank is non-zero.
+                if (freeAction instanceof ExecutionAction) {
+                    ExecutionAction execFreeAction = (ExecutionAction) freeAction;
+                    int taskRank = execFreeAction.getTask().getRank();
+
+                    if (taskRank != 0) {
+                        // Determine the predecessor-ID set of this action to identify siblings
+                        // (actions that share at least one common predecessor).
+                        Set<Long> freeActionPredIds = getPredecessorIds(freeAction);
+                        boolean hasLowerRankedSibling = false;
+
+                        // Check among the current batch of newly data-free actions.
+                        for (AllocatableAction other : dataFreeActions) {
+                            if (other == freeAction || !(other instanceof ExecutionAction)) {
+                                continue;
+                            }
+                            int otherRank = ((ExecutionAction) other).getTask().getRank();
+                            if (otherRank >= taskRank) {
+                                continue; // not a lower-ranked candidate
+                            }
+                            // Two actions are siblings when they share at least one predecessor.
+                            Set<Long> otherPredIds = getPredecessorIds(other);
+                            if (!java.util.Collections.disjoint(freeActionPredIds, otherPredIds)) {
+                                hasLowerRankedSibling = true;
+                                break;
+                            }
+                        }
+                        // If not found yet, also check already-deferred actions.
+                        if (!hasLowerRankedSibling) {
+                            for (AllocatableAction deferred : deferredActions.keySet()) {
+                                if (!(deferred instanceof ExecutionAction)) {
+                                    continue;
+                                }
+                                int deferredRank = ((ExecutionAction) deferred).getTask().getRank();
+                                if (deferredRank >= taskRank) {
+                                    continue;
+                                }
+                                Set<Long> deferredPredIds = getPredecessorIds(deferred);
+                                if (!java.util.Collections.disjoint(freeActionPredIds, deferredPredIds)) {
+                                    hasLowerRankedSibling = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (hasLowerRankedSibling) {
+                            // A sibling with higher scheduling priority exists: defer.
+                            deferredActions.put(freeAction, System.currentTimeMillis());
+                            LOGGER.debug("[PredictionTS] Task rank " + taskRank
+                                + " deferred (rank-based) — awaiting lower-ranked sibling: " + freeAction);
+                        } else {
+                            // This action has the lowest rank among its live siblings: schedule now.
+                            Score actionScore = generateActionScore(freeAction);
+                            executableActions.add(new ObjectValue<>(freeAction, actionScore));
+                            LOGGER.debug("[PredictionTS] Task rank " + taskRank
+                                + " is lowest available (rank-based) — scheduling immediately: " + freeAction);
+                        }
+
+                    } else {
+                        // rank == 0 means highest priority: schedule immediately, no sibling check needed.
+                        Score actionScore = generateActionScore(freeAction);
+                        executableActions.add(new ObjectValue<>(freeAction, actionScore));
+                    }
+                } else {
+                    // Non-ExecutionAction (system action): schedule immediately, no rank logic.
+                    Score actionScore = generateActionScore(freeAction);
+                    executableActions.add(new ObjectValue<>(freeAction, actionScore));
+                }
             }
         }
         // No resourceFreeActions handled in this scheduler variant.

@@ -27,36 +27,40 @@ public class PredictionSchedulingOptimizer extends SchedulingOptimizer<Predictio
 
     @Override
     public void run() {
-
         while (!this.stop) {
 
-            // Release deferred actions that have exceeded the timeout.
             if (this.scheduler.deferredActions == null) {
                 continue;
             }
             Iterator<Map.Entry<AllocatableAction, Long>> deferIter =
                 this.scheduler.deferredActions.entrySet().iterator();
+
             while (deferIter.hasNext()) {
-                long now = System.currentTimeMillis();
                 Map.Entry<AllocatableAction, Long> entry = deferIter.next();
+                long now = System.currentTimeMillis();
                 if (now - entry.getValue() >= DEFER_TIMEOUT_MS) {
                     AllocatableAction action = entry.getKey();
                     TaskScheduler.LOGGER.debug("[PredictionTS] Deferred action released by timeout: " + action);
                     Score actionScore = scheduler.generateActionScore(action);
                     try {
                         this.scheduler.scheduleAndLaunchAction(action, actionScore);
+                        deferIter.remove();
                     } catch (BlockedActionException | UnassignedActionException e) {
                         TaskScheduler.LOGGER.error("[PredictionTS] Error scheduling deferred action: " + action, e);
                     }
-                    deferIter.remove();
                 }
             }
+            // try {
+            // Thread.sleep(DEFER_TIMEOUT_MS / 2);
+            // } catch (InterruptedException e) {
+            // Thread.currentThread().interrupt();
+            // }
         }
     }
 
     @Override
     public void shutdown() {
-        this.stop = true;
+        this.stop = true; // TODO is it necessary?
         this.interrupt();
     }
 }

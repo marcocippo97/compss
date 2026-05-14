@@ -171,12 +171,13 @@ public interface COMPSsRuntime {
      * @param hasTarget Whether the task has a target parameter or not.
      * @param numReturns The number of return values of the method.
      * @param parameterCount The number of parameters of the method.
+     * @param rank Rank for the scheduler.
      * @param parameters An object array containing the method parameters.
      * @return
      */
     public int executeTask(Long appId, String signature, String onFailure, int timeOut, boolean isPrioritary,
         int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed,
-        boolean hasTarget, Integer numReturns, int parameterCount, Object... parameters);
+        boolean hasTarget, Integer numReturns, int parameterCount, int rank, Object... parameters);
 
     /**
      * New Method Task for Loader.

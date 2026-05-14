@@ -371,6 +371,7 @@ class COMPSsModule:  # pylint: disable=invalid-name, too-many-public-methods
         distributed: bool,
         has_target: bool,
         num_returns: int,
+        rank : int,
         values: list,
         names: list,
         compss_types: list,
@@ -379,7 +380,7 @@ class COMPSsModule:  # pylint: disable=invalid-name, too-many-public-methods
         compss_prefixes: list,
         content_types: list,
         weights: list,
-        keep_renames: list,
+        keep_renames: list
     ) -> None:
         """Call to process_task.
 
@@ -404,6 +405,7 @@ class COMPSsModule:  # pylint: disable=invalid-name, too-many-public-methods
         :param content_types: COMPSs types.
         :param weights: Parameter weights.
         :param keep_renames: Boolean keep renames.
+        :param rank: rank for the scheduler
         :return: None.
         """
         self.compss.process_task(
@@ -419,6 +421,7 @@ class COMPSsModule:  # pylint: disable=invalid-name, too-many-public-methods
             distributed,
             has_target,
             num_returns,
+            rank,
             values,
             names,
             compss_types,
@@ -427,7 +430,7 @@ class COMPSsModule:  # pylint: disable=invalid-name, too-many-public-methods
             compss_prefixes,
             content_types,
             weights,
-            keep_renames,
+            keep_renames
         )
 
     def process_http_task(  # pylint: disable=too-many-arguments, R0914
