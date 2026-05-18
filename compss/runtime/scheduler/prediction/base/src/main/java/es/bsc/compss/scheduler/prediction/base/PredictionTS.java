@@ -401,7 +401,6 @@ public class PredictionTS extends TaskScheduler {
 
                 // Sort completed successors by descending average execution time (LJF order)
                 // and assign rank 0, 1, 2, … so the longest task enters the queue first.
-                // TODO getExecutionTime() doesn't retrieve the right time
                 Comparator<TaskGraphCache.NodeInfo> comparator =
                     Comparator.comparingLong(s -> s.executionProfile.getExecutionTime());
                 completedSuccessors.sort(comparator.reversed());
@@ -464,7 +463,7 @@ public class PredictionTS extends TaskScheduler {
     /**
      * Returns the set of predecessor task IDs for the given action as recorded in the {@link TaskGraphCache}.
      */
-    private Set<Long> getPredecessorIds(AllocatableAction action) {
+    Set<Long> getPredecessorIds(AllocatableAction action) {
         Set<Long> predIds = new HashSet<>();
         for (TaskGraphCache.NodeInfo pred : taskGraphCache.getPredecessors(action.getId())) {
             predIds.add(pred.taskId);

@@ -73,7 +73,7 @@ public class Task extends AbstractTask {
     private boolean submitted;
 
     // Rank for scheduler
-    private int rank;
+    private volatile int rank;
 
 
     private Task(Application app, TaskMonitor monitor, TaskType type, Lang lang, String signature, boolean isPrioritary,
