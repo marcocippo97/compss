@@ -160,6 +160,12 @@ public class PredictionTS extends TaskScheduler {
      */
     final Map<AllocatableAction, Long> deferredActions = new ConcurrentHashMap<>();
 
+    /**
+     * Variable that signals to the {@link PredictionSchedulingOptimizer} that {@code deferredActions} has been
+     * populated.
+     */
+    volatile boolean deferredDirty = false;
+
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
@@ -486,6 +492,8 @@ public class PredictionTS extends TaskScheduler {
         List<AllocatableAction> dataFreeActions, List<AllocatableAction> resourceFreeActions,
         List<AllocatableAction> blockedCandidates, ResourceScheduler<T> resource) {
 
+        boolean addedAny = false;
+
         manageUpgradedActions(resource);
 
         PriorityQueue<ObjectValue<AllocatableAction>> executableActions = new PriorityQueue<>();
@@ -538,6 +546,7 @@ public class PredictionTS extends TaskScheduler {
                 } else {
                     // A higher-priority sibling is expected: defer this action.
                     deferredActions.put(freeAction, System.currentTimeMillis());
+                    addedAny = true;
                     LOGGER.debug("[PredictionTS] Hint rank " + freeActionRank
                         + " deferred — awaiting lower-ranked sibling: " + freeAction);
                 }
@@ -604,6 +613,7 @@ public class PredictionTS extends TaskScheduler {
                         if (hasLowerRankedSibling) {
                             // A sibling with higher scheduling priority exists: defer.
                             deferredActions.put(freeAction, System.currentTimeMillis());
+                            addedAny = true;
                             LOGGER.debug("[PredictionTS] Task rank " + taskRank
                                 + " deferred (rank-based) — awaiting lower-ranked sibling: " + freeAction);
                         } else {
@@ -626,7 +636,9 @@ public class PredictionTS extends TaskScheduler {
                 }
             }
         }
-        // No resourceFreeActions handled in this scheduler variant.
+        if (addedAny) {
+            deferredDirty = true;
+        }
 
         boolean canExecute = true;
         boolean readyQueueEmpty = readyQueue.isEmpty();
