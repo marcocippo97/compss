@@ -178,7 +178,7 @@ class Task:  # pylint: disable=R0902, R0903
         """
         # set rank
         if "rank" in kwargs:
-            self.decorator_arguments.rank = kwargs.pop("rank")
+            self.decorator_arguments.rank = kwargs["rank"]
 
         # Determine the context and decide what to do
         if CONTEXT.in_master():
