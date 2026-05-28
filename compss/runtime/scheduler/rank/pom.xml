@@ -5,17 +5,17 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!-- GENERAL INFORMATION -->
-    <artifactId>compss-scheduler</artifactId>
+    <artifactId>compss-scheduler-rank</artifactId>
     <packaging>pom</packaging>
     <parent>
         <groupId>es.bsc.compss</groupId>
-        <artifactId>compss-runtime</artifactId>
+        <artifactId>compss-scheduler</artifactId>
         <version>3.3.3.post2601</version>
     </parent>
 
     <!-- PROJECT INFORMATION -->
-    <name>COMPSs Scheduler</name>
-    <description>Collection of available schedulers to execute tasks on remote workers.</description>
+    <name>COMPSs Scheduler Rank</name>
+    <description>Scheduler that uses ranks to schedule tasks.</description>
     <url>http://www.bsc.es</url>
     <inceptionYear>2015</inceptionYear>
     <licenses>
@@ -31,11 +31,8 @@
 
     <!-- SUB-MODULES -->
     <modules>
-        <module>commons</module>
-        <module>test</module>
-        <module>fullgraph</module>
-        <module>orderstrict</module>
-        <module>lookahead</module>
+        <module>base</module>
+        <module>prediction</module>
         <module>rank</module>
     </modules>
 </project>
