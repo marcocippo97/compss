@@ -121,6 +121,7 @@ public abstract class PipedInvoker extends ExternalInvoker {
                                 boolean isPrioritary = entpc.getPrioritary();
                                 boolean hasTarget = entpc.hasTarget();
                                 int numReturns = entpc.getNumReturns();
+                                int rank = entpc.getRank();
                                 int parameterCount = entpc.getParameterCount();
                                 Object[] parameters = entpc.getParameters();
                                 if (this.appId == null) {
@@ -136,7 +137,7 @@ public abstract class PipedInvoker extends ExternalInvoker {
 
                                     this.context.getRuntimeAPI().executeTask(this.appId, signature, onFailure, timeOut,
                                         isPrioritary, numNodes, isReduce, reduceChunkSize, isReplicated, isDistributed,
-                                        hasTarget, numReturns, parameterCount, parameters);
+                                        hasTarget, numReturns, rank, parameterCount, parameters);
 
                                 } else {
                                     String methodClass = entpc.getMethodClass();

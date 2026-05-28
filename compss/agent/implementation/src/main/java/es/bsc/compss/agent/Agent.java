@@ -255,7 +255,8 @@ public class Agent {
                 numNodes, // Number of nodes
                 false, 0, // Reduce information
                 false, false, // Scheduling information (isDistributed, isReplicated)
-                target != null, results.length, paramsCount, // Parameter information
+                target != null, results.length, 0, // rank 0 (currectly not used for agents)
+                paramsCount, // Parameter information
                 params // Parameter values
             );
 
