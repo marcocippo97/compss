@@ -930,6 +930,7 @@ def process_task(
             LOGGER.debug("\t- On failure behavior: %s", on_failure)
             LOGGER.debug("\t- Task time out: %s", str(time_out))
             LOGGER.debug("\t- Is http: %s", str(is_http))
+            LOGGER.debug("\t- Rank: %s", str(rank))
 
         # Check that there is the same amount of values as their types, as well
         # as their directions, streams and prefixes.
