@@ -110,11 +110,12 @@
   echo "- Compiling Streaming Backend (Kafka)"
   if [ "$kafka" -ne 0 ]; then
     cd "${TMP_DIR}"/dependencies/kafka
+    gradle wrapper
     if which gradle; then
-      gradle
+      ./retry_zinc gradle
       ev=$?
     elif [ -n "${GRADLE_HOME}" ]; then
-      "${GRADLE_HOME}"/bin/gradle
+      ./retry_zinc "${GRADLE_HOME}"/bin/gradle
       ev=$?
     else
        echo "ERROR: Cannot find gradle installation. Please define it in the PATH or set the GRADLE_HOME environment variable"
@@ -124,7 +125,7 @@
       echo "ERROR: Failed to compile Kafka dependency"
       exit 1
     fi
-    ./gradlew jar
+    ./retry_zinc ./gradlew jar
     ev=$?
     if [ $ev -ne 0 ]; then
       echo "ERROR: Failed to build Kafka dependency"
@@ -149,7 +150,11 @@
 
   cd "${TMP_DIR}"
   echo "PACKAGING RUNTIME FILES"
-  tar czf COMPSs_TMPDIR.tgz *
+  if [ "$(uname)" == "Darwin" ]; then
+    COPYFILE_DISABLE=1 tar czf COMPSs_TMPDIR.tgz *
+  else
+    tar czf COMPSs_TMPDIR.tgz *
+  fi
   cd "${SCRIPT_DIR}"
   echo "COPYING RUNTIME FILES TO THE SUPERCOMPUTER"
 

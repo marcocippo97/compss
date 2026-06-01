@@ -52,6 +52,7 @@ public class ExecuteNestedTaskExternalCommand implements ExternalCommand {
     protected Object[] parameters;
     protected int parameterCount;
     protected int numReturns;
+    protected int rank;
     protected boolean hasTarget;
     protected int numNodes;
     protected boolean reduce;
@@ -95,6 +96,10 @@ public class ExecuteNestedTaskExternalCommand implements ExternalCommand {
 
     public int getNumReturns() {
         return this.numReturns;
+    }
+
+    public int getRank() {
+        return this.rank;
     }
 
     public int getParameterCount() {
