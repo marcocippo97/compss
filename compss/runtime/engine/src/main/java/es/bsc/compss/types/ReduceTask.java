@@ -99,10 +99,10 @@ public class ReduceTask extends Task {
      */
     public ReduceTask(Application app, Lang lang, String signature, boolean isPrioritary, int numNodes,
         boolean isReduction, int reduceChunkSize, boolean isReplicated, boolean isDistributed, boolean hasTarget,
-        int numReturns, List<Parameter> parameters, TaskMonitor monitor, OnFailure onFailure, long timeOut) {
+        int numReturns, List<Parameter> parameters, TaskMonitor monitor, OnFailure onFailure, long timeOut, int rank) {
 
         super(app, lang, signature, isPrioritary, numNodes, isReduction, isReplicated, isDistributed, hasTarget,
-            numReturns, parameters, monitor, onFailure, timeOut, 0);
+            numReturns, parameters, monitor, onFailure, timeOut, rank);
         this.tasks = new LinkedList<>();
         this.chunkSize = reduceChunkSize;
         this.totalOperations = 0;

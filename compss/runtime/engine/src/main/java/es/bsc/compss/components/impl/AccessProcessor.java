@@ -154,7 +154,7 @@ public class AccessProcessor extends RequestDispatcher<APRequest> implements Che
         if (isReduce) {
             if (reduceChunkSize >= 2) {
                 currentTask = new ReduceTask(app, lang, signature, isPrioritary, numNodes, isReduce, reduceChunkSize,
-                    isReplicated, isDistributed, hasTarget, numReturns, parameters, monitor, onFailure, timeOut);
+                    isReplicated, isDistributed, hasTarget, numReturns, parameters, monitor, onFailure, timeOut, rank);
             } else {
                 ErrorManager.warn("Requesting to create task with chunk_size smaller than 2. Executing as simple task");
                 currentTask = new Task(app, lang, signature, isPrioritary, numNodes, isReduce, isReplicated,
