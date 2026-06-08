@@ -1,19 +1,3 @@
-/*
- *  Copyright 2002-2025 Barcelona Supercomputing Center (www.bsc.es)
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- */
 package es.bsc.compss.scheduler.rank.prediction;
 
 import es.bsc.compss.components.impl.ResourceScheduler;
@@ -46,9 +30,13 @@ import java.util.Set;
 
 /**
  * Task scheduler that extends {@link RankBaseTS} combining a similarity-based look-ahead mechanism with a rank-based
- * fallback deferral policy.
+ * fallback scheduling policy.
  */
 public class PredictionTS extends RankBaseTS {
+
+    // -------------------------------------------------------------------------
+    // Tuning constants
+    // -------------------------------------------------------------------------
 
     /**
      * Half-width of the DAG-depth window used to filter comparison candidates. A task {@code taskOld} is eligible for
@@ -83,7 +71,9 @@ public class PredictionTS extends RankBaseTS {
      */
     private final Map<Long, AllocatableAction> taskIdToAction = new HashMap<>();
 
-    /** Shared task-graph cache providing DAG structure and per-node features. */
+    /**
+     * Shared task-graph cache providing DAG structure and per-node features.
+     */
     private final TaskGraphCache taskGraphCache;
 
     /**
@@ -98,24 +88,19 @@ public class PredictionTS extends RankBaseTS {
 
     /**
      * Maps each {@code newTask} to the list of {@link SuccessorHint} objects generated from the matching
-     * {@code oldTask}'s successors. Entries are consumed in {@link #handleDependencyFreeActions} when a predicted
-     * successor becomes dependency-free, and removed once all hints in the list have been consumed.
+     * {@code oldTask}'s successors. Hints are consumed in {@link #handleDependencyFreeActions} when a predicted
+     * successor becomes dependency-free, and the entry is removed once all hints in the list have been consumed.
      */
     private final Map<AllocatableAction, List<SuccessorHint>> successorHintMap = new HashMap<>();
-
-
-    @Override
-    protected String getLoggerPrefix() {
-        return "[PredictionTS]";
-    }
 
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
 
+
     /**
      * Constructs a new PredictionTS instance.
-     * 
+     *
      * @param orchestrator Element that orders the execution of actions.
      */
     public PredictionTS(ActionOrchestrator orchestrator) {
@@ -124,6 +109,11 @@ public class PredictionTS extends RankBaseTS {
         this.similarityEngine = new SimilarityEngine(taskGraphCache);
         this.similarityFunction =
             new WLSimilarityFunction(taskGraphCache, similarityEngine, /* hops */ 2, /* r */ 0.8, /* alpha */ 0.0);
+    }
+
+    @Override
+    protected String getLoggerPrefix() {
+        return "[PredictionTS]";
     }
 
     // -------------------------------------------------------------------------
@@ -142,39 +132,32 @@ public class PredictionTS extends RankBaseTS {
     @Override
     public void scheduleAction(AllocatableAction action, Score actionScore) throws BlockedActionException {
         if (action instanceof ExecutionAction) {
-
             ExecutionAction execAction = (ExecutionAction) action;
             int coreId = execAction.getCoreId();
 
             Map<String, String> categorical = new HashMap<>();
             Map<String, double[]> numerical = new HashMap<>();
-
             categorical.put("task_name", execAction.getTask().getTaskDescription().getName());
-            List<? extends Parameter> parameters = execAction.getTask().getParameters();
+
             int counter = 1;
-
-            for (Parameter p : parameters) {
-                categorical.put("param" + counter, p.getName());
-                counter++;
-
+            for (Parameter p : execAction.getTask().getParameters()) {
+                categorical.put("param" + counter++, p.getName());
                 if (!p.isPotentialDependency()) {
                     if (p instanceof BasicTypeParameter) {
                         BasicTypeParameter sp = (BasicTypeParameter) p;
                         if (sp.getValue() instanceof Number) {
-                            double[] spNumArray = new double[] { ((Number) sp.getValue()).doubleValue() };
-                            numerical.put(sp.getName(), spNumArray);
+                            numerical.put(sp.getName(), new double[] { ((Number) sp.getValue()).doubleValue() });
                         }
                     } else if (p instanceof CollectiveParameter) {
-                        double[] spNumArray = new double[] { (double) ((CollectiveParameter) p).getElements().size() };
-                        numerical.put(p.getName(), spNumArray);
+                        numerical.put(p.getName(),
+                            new double[] { (double) ((CollectiveParameter) p).getElements().size() });
                     } else if (p instanceof FileParameter) {
-                        ; // TODO: retrieve file size
+                        ; // TODO: add method to retrieve file size
                     }
                 }
             }
 
             TaskFeatures features = new TaskFeatures(coreId, categorical, numerical);
-
             List<Long> predecessorIds = new ArrayList<>();
             for (AllocatableAction pred : execAction.getDataPredecessors()) {
                 predecessorIds.add(pred.getId());
@@ -186,13 +169,10 @@ public class PredictionTS extends RankBaseTS {
             evaluateSimilarityAndBuildHints(execAction);
 
             if (recentTaskWindow.size() >= MAX_RECENT_WINDOW_SIZE) {
-                AllocatableAction evicted = recentTaskWindow.pollFirst();
-                successorHintMap.remove(evicted);
+                successorHintMap.remove(recentTaskWindow.pollFirst());
             }
             recentTaskWindow.addLast(execAction);
         }
-
-        // Delegate base scheduling logic (ready queue / immediate dispatch).
         super.scheduleAction(action, actionScore);
     }
 
@@ -211,20 +191,16 @@ public class PredictionTS extends RankBaseTS {
     @Override
     public void actionCompleted(AllocatableAction action) {
         if (action.getCoreId() != null) {
-            ResourceScheduler<?> rs = action.getAssignedResource();
             Profile profile = action.getProfile();
-
-            Map<Long, Double> pending = taskGraphCache.updateOnCompletion(action.getId(), rs, profile);
+            Map<Long, Double> pending =
+                taskGraphCache.updateOnCompletion(action.getId(), action.getAssignedResource(), profile);
 
             for (Map.Entry<Long, Double> entry : pending.entrySet()) {
-                long newTaskId = entry.getKey();
-                double confidence = entry.getValue();
-                AllocatableAction newTaskAction = taskIdToAction.get(newTaskId);
+                AllocatableAction newTaskAction = taskIdToAction.get(entry.getKey());
                 TaskGraphCache.NodeInfo succInfo = taskGraphCache.getNode(action.getId());
-
                 if (newTaskAction != null && succInfo != null) {
-                    SuccessorHint hint =
-                        new SuccessorHint(succInfo.features.getCoreId(), succInfo.executionProfile, confidence, 0);
+                    SuccessorHint hint = new SuccessorHint(succInfo.features.getCoreId(), succInfo.executionProfile,
+                        entry.getValue(), 0);
                     successorHintMap.computeIfAbsent(newTaskAction, k -> new ArrayList<>()).add(hint);
                 }
             }
@@ -250,55 +226,44 @@ public class PredictionTS extends RankBaseTS {
         if (newInfo == null) {
             return;
         }
-        int depthNew = newInfo.depth;
         Set<Long> newPredSet = new HashSet<>(newInfo.predecessorIds);
 
         for (AllocatableAction taskOld : recentTaskWindow) {
-
             if (newInfo.predecessorIds.contains(taskOld.getId())) {
                 continue;
             }
-
             TaskGraphCache.NodeInfo oldInfo = taskGraphCache.getNode(taskOld.getId());
-            if (oldInfo == null) {
+            if (oldInfo == null || Math.abs(oldInfo.depth - newInfo.depth) > DEPTH_WINDOW) {
                 continue;
             }
-            if (Math.abs(oldInfo.depth - depthNew) > DEPTH_WINDOW) {
-                continue;
-            }
-
-            Set<Long> oldPredSet = new HashSet<>(oldInfo.predecessorIds);
-            if (!newPredSet.isEmpty() && newPredSet.equals(oldPredSet)) {
+            if (!newPredSet.isEmpty() && newPredSet.equals(new HashSet<>(oldInfo.predecessorIds))) {
                 continue;
             }
 
             double sim = similarityFunction.compute(taskNew.getId(), taskOld.getId());
+            if (sim <= SIMILARITY_THRESHOLD) {
+                continue;
+            }
 
-            if (sim > SIMILARITY_THRESHOLD) {
-                LOGGER.debug(
-                    "[PredictionTS] Similarity match: taskNew=" + taskNew + " taskOld=" + taskOld + " score=" + sim);
+            LOGGER.debug(
+                getLoggerPrefix() + " Similarity match: taskNew=" + taskNew + " taskOld=" + taskOld + " score=" + sim);
 
-                List<TaskGraphCache.NodeInfo> successors = taskGraphCache.getSuccessors(taskOld.getId());
-
-                List<TaskGraphCache.NodeInfo> completedSuccessors = new ArrayList<>();
-                for (TaskGraphCache.NodeInfo succ : successors) {
-                    if (succ.executionProfile != null) {
-                        completedSuccessors.add(succ);
-                    } else {
-                        succ.pendingHintRequests.put(taskNew.getId(), sim);
-                    }
+            List<TaskGraphCache.NodeInfo> completed = new ArrayList<>();
+            for (TaskGraphCache.NodeInfo succ : taskGraphCache.getSuccessors(taskOld.getId())) {
+                if (succ.executionProfile != null) {
+                    completed.add(succ);
+                } else {
+                    succ.pendingHintRequests.put(taskNew.getId(), sim);
                 }
+            }
 
-                Comparator<TaskGraphCache.NodeInfo> comparator =
-                    Comparator.comparingLong(s -> s.executionProfile.getExecutionTime());
-                completedSuccessors.sort(comparator.reversed());
+            completed.sort(Comparator
+                .comparingLong((TaskGraphCache.NodeInfo s) -> s.executionProfile.getExecutionTime()).reversed());
 
-                for (int rankIdx = 0; rankIdx < completedSuccessors.size(); rankIdx++) {
-                    TaskGraphCache.NodeInfo succ = completedSuccessors.get(rankIdx);
-                    SuccessorHint hint =
-                        new SuccessorHint(succ.features.getCoreId(), succ.executionProfile, sim, rankIdx);
-                    successorHintMap.computeIfAbsent(taskNew, k -> new ArrayList<>()).add(hint);
-                }
+            for (int rankIdx = 0; rankIdx < completed.size(); rankIdx++) {
+                TaskGraphCache.NodeInfo succ = completed.get(rankIdx);
+                successorHintMap.computeIfAbsent(taskNew, k -> new ArrayList<>())
+                    .add(new SuccessorHint(succ.features.getCoreId(), succ.executionProfile, sim, rankIdx));
             }
         }
     }
@@ -308,157 +273,68 @@ public class PredictionTS extends RankBaseTS {
     // -------------------------------------------------------------------------
 
     /**
-     * Handles actions that have just become free of data dependencies applying a two-tier policy:
-     * <ol>
-     * <li><b>Hint-based (siblings only).</b> If a {@link SuccessorHint} is found for the action among its predecessors'
-     * hint maps, hint ranks are used to order sibling execution: the action with the lowest hint rank is submitted
-     * immediately; all others are deferred into {@code deferredActions} until released by the optimizer.</li>
-     * <li><b>Rank-based fallback (siblings only).</b> If no hint is available and the action is an
-     * {@link ExecutionAction} with rank {@literal >} 0, the task rank is used instead: the action is deferred when any
-     * sibling (task sharing at least one common predecessor) with a lower rank exists in {@code dataFreeActions} or
-     * {@code deferredActions}; otherwise it is submitted immediately. Rank-0 actions are always submitted
-     * immediately.</li>
-     * </ol>
-     * Resource-free actions ({@code resourceFreeActions}) are not handled by this scheduler variant. Deferred actions
-     * are eventually released in ascending rank order by
-     * {@link es.bsc.compss.scheduler.rank.base.RankSchedulingOptimizer}.
+     * Handles actions that have just become free of data dependencies by determining the effective rank for each action
+     * and embedding it into the scheduling score via {@link generateActionScore}. All actions are submitted to the
+     * executable queue immediately; the {@link PriorityQueue} ordering guarantees that actions with lower effective
+     * rank (higher priority) are dispatched first when resources are contested.
      */
     @Override
     protected <T extends WorkerResourceDescription> void handleDependencyFreeActions(
         List<AllocatableAction> dataFreeActions, List<AllocatableAction> resourceFreeActions,
         List<AllocatableAction> blockedCandidates, ResourceScheduler<T> resource) {
 
-        boolean addedAny = false;
-
         manageUpgradedActions(resource);
 
         PriorityQueue<ObjectValue<AllocatableAction>> executableActions = new PriorityQueue<>();
 
         for (AllocatableAction freeAction : dataFreeActions) {
+            int effectiveRank = 0;
 
-            SuccessorHint matchingHint = null;
-            AllocatableAction hintPredecessor = null;
+            if (freeAction instanceof ExecutionAction) {
+                // --- Tier 1: hint-based rank (siblings only) ---
+                SuccessorHint matchingHint = null;
+                AllocatableAction hintPredecessor = null;
 
-            for (TaskGraphCache.NodeInfo predTask : taskGraphCache.getPredecessors(freeAction.getId())) {
-                AllocatableAction predecessor = taskIdToAction.get(predTask.taskId);
-                List<SuccessorHint> hints = successorHintMap.get(predecessor);
-                if (hints == null) {
-                    continue;
-                }
-                for (SuccessorHint hint : hints) {
-                    if (!hint.isConsumed() && hint.getCoreId() == freeAction.getCoreId()) {
-                        matchingHint = hint;
-                        hintPredecessor = predecessor;
+                for (TaskGraphCache.NodeInfo predTask : taskGraphCache.getPredecessors(freeAction.getId())) {
+                    AllocatableAction predecessor = taskIdToAction.get(predTask.taskId);
+                    List<SuccessorHint> hints = successorHintMap.get(predecessor);
+                    if (hints == null) {
+                        continue;
+                    }
+                    for (SuccessorHint hint : hints) {
+                        // TODO: the pairing between actions should follow the same similarity logic
+                        // used to create the hints
+                        if (!hint.isConsumed() && hint.getCoreId() == freeAction.getCoreId()) {
+                            matchingHint = hint;
+                            hintPredecessor = predecessor;
+                            break;
+                        }
+                    }
+                    if (matchingHint != null) {
                         break;
                     }
                 }
+
                 if (matchingHint != null) {
-                    break;
-                }
-            }
-
-            if (matchingHint != null) {
-                List<SuccessorHint> siblingHints = successorHintMap.get(hintPredecessor);
-                int freeActionRank = matchingHint.getRank();
-                boolean hasLowerRankedSibling = false;
-                for (SuccessorHint sibling : siblingHints) {
-                    if (!sibling.isConsumed() && sibling != matchingHint && sibling.getRank() < freeActionRank) {
-                        hasLowerRankedSibling = true;
-                        break;
-                    }
-                }
-
-                if (!hasLowerRankedSibling) {
+                    effectiveRank = matchingHint.getRank();
                     matchingHint.markConsumed();
-                    Score actionScore = generateActionScore(freeAction);
-                    executableActions.add(new ObjectValue<>(freeAction, actionScore));
-                    LOGGER.debug("[PredictionTS] Hint rank " + freeActionRank + " is lowest — scheduling immediately: "
-                        + freeAction);
-                } else {
-                    deferredActions.put(freeAction, System.currentTimeMillis());
-                    addedAny = true;
-                    LOGGER.debug("[PredictionTS] Hint rank " + freeActionRank
-                        + " deferred — awaiting lower-ranked sibling: " + freeAction);
-                }
-
-                boolean allConsumed = true;
-                for (SuccessorHint sibling : siblingHints) {
-                    if (!sibling.isConsumed()) {
-                        allConsumed = false;
-                        break;
+                    // Remove the predecessor's hint list when all sibling hints are consumed.
+                    boolean allConsumed =
+                        successorHintMap.get(hintPredecessor).stream().allMatch(SuccessorHint::isConsumed);
+                    if (allConsumed) {
+                        successorHintMap.remove(hintPredecessor);
                     }
-                }
-                if (allConsumed) {
-                    successorHintMap.remove(hintPredecessor);
-                }
-
-            } else {
-                // Rank-based fallback: sibling check via shared predecessors.
-                if (freeAction instanceof ExecutionAction) {
-                    ExecutionAction execFreeAction = (ExecutionAction) freeAction;
-                    int taskRank = execFreeAction.getTask().getRank();
-
-                    if (taskRank != 0) {
-                        Set<Long> freeActionPredIds = getPredecessorIds(freeAction);
-                        boolean hasLowerRankedSibling = false;
-
-                        for (AllocatableAction other : dataFreeActions) {
-                            if (other == freeAction || !(other instanceof ExecutionAction)) {
-                                continue;
-                            }
-                            int otherRank = ((ExecutionAction) other).getTask().getRank();
-                            if (otherRank >= taskRank) {
-                                continue;
-                            }
-                            Set<Long> otherPredIds = getPredecessorIds(other);
-                            if (!java.util.Collections.disjoint(freeActionPredIds, otherPredIds)) {
-                                hasLowerRankedSibling = true;
-                                break;
-                            }
-                        }
-
-                        if (!hasLowerRankedSibling) {
-                            for (AllocatableAction deferred : deferredActions.keySet()) {
-                                if (!(deferred instanceof ExecutionAction)) {
-                                    continue;
-                                }
-                                int deferredRank = ((ExecutionAction) deferred).getTask().getRank();
-                                if (deferredRank >= taskRank) {
-                                    continue;
-                                }
-                                Set<Long> deferredPredIds = getPredecessorIds(deferred);
-                                if (!java.util.Collections.disjoint(freeActionPredIds, deferredPredIds)) {
-                                    hasLowerRankedSibling = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (hasLowerRankedSibling) {
-                            deferredActions.put(freeAction, System.currentTimeMillis());
-                            addedAny = true;
-                            LOGGER.debug("[PredictionTS] Task rank " + taskRank
-                                + " deferred (rank-based) — awaiting lower-ranked sibling: " + freeAction);
-                        } else {
-                            Score actionScore = generateActionScore(freeAction);
-                            executableActions.add(new ObjectValue<>(freeAction, actionScore));
-                            LOGGER.debug("[PredictionTS] Task rank " + taskRank
-                                + " is lowest available (rank-based) — scheduling immediately: " + freeAction);
-                        }
-
-                    } else {
-                        Score actionScore = generateActionScore(freeAction);
-                        executableActions.add(new ObjectValue<>(freeAction, actionScore));
-                    }
+                    LOGGER.debug(getLoggerPrefix() + " Hint rank " + effectiveRank + " assigned to: " + freeAction);
                 } else {
-                    Score actionScore = generateActionScore(freeAction);
-                    executableActions.add(new ObjectValue<>(freeAction, actionScore));
+                    // --- Tier 2: task-rank fallback ---
+                    effectiveRank = ((ExecutionAction) freeAction).getTask().getRank();
+                    LOGGER.debug(
+                        getLoggerPrefix() + " Task rank " + effectiveRank + " (fallback) assigned to: " + freeAction);
                 }
             }
-        }
 
-        if (addedAny) {
-            deferredDirty = true;
+            Score actionScore = generateActionScore(freeAction, effectiveRank);
+            executableActions.add(new ObjectValue<>(freeAction, actionScore));
         }
 
         boolean canExecute = true;
@@ -478,7 +354,6 @@ public class PredictionTS extends RankBaseTS {
             AllocatableAction aa = topPriority.getObject();
             try {
                 scheduleAndLaunchAction(aa, topPriority.getScore());
-
                 if (topPriority == topReadyQueue) {
                     readyQueue.poll();
                     addedActions.remove(aa);
@@ -497,24 +372,5 @@ public class PredictionTS extends RankBaseTS {
         if (!executableActions.isEmpty()) {
             readyQueue.addAll(executableActions);
         }
-    }
-
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Returns the set of predecessor task IDs for the given action as recorded in the {@link TaskGraphCache}. Returns
-     * an empty set if the action is not registered or has no predecessors.
-     *
-     * @param action The action whose predecessors are queried.
-     * @return A set of task IDs corresponding to the action's data predecessors.
-     */
-    private Set<Long> getPredecessorIds(AllocatableAction action) {
-        Set<Long> predIds = new HashSet<>();
-        for (TaskGraphCache.NodeInfo pred : taskGraphCache.getPredecessors(action.getId())) {
-            predIds.add(pred.taskId);
-        }
-        return predIds;
     }
 }

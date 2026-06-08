@@ -73,7 +73,7 @@ public class Task extends AbstractTask {
     private boolean submitted;
 
     // Rank for scheduler
-    private final int rank;
+    private int rank;
 
 
     private Task(Application app, TaskMonitor monitor, TaskType type, Lang lang, String signature, boolean isPrioritary,
@@ -152,6 +152,13 @@ public class Task extends AbstractTask {
             // Parameters
             hasTarget, numReturns, parameters, rank);
 
+    }
+
+    /**
+     * Set the task rank.
+     */
+    public int setRank(int rank) {
+        this.rank = rank;
     }
 
     /**

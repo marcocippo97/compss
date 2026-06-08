@@ -1,19 +1,3 @@
-/*
- *  Copyright 2002-2025 Barcelona Supercomputing Center (www.bsc.es)
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- */
 package es.bsc.compss.scheduler.rank.base;
 
 import es.bsc.compss.components.impl.ResourceScheduler;
@@ -24,6 +8,7 @@ import es.bsc.compss.scheduler.types.ActionOrchestrator;
 import es.bsc.compss.scheduler.types.AllocatableAction;
 import es.bsc.compss.scheduler.types.ObjectValue;
 import es.bsc.compss.scheduler.types.Score;
+import es.bsc.compss.types.allocatableactions.ExecutionAction;
 import es.bsc.compss.types.resources.WorkerResourceDescription;
 
 import java.util.HashMap;
@@ -31,13 +16,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
- * Abstract base task scheduler that provides rank-aware deferred scheduling infrastructure. Concrete subclasses
- * implement {@link #handleDependencyFreeActions} to define the specific deferral policy (pure rank-based or
- * prediction-assisted).
+ * Abstract base task scheduler that provides rank-aware scheduling infrastructure. Rank is embedded directly into the
+ * {@link Score#priority} field so that the {@link PriorityQueue} ordering replaces any explicit deferral mechanism:
+ * tasks with rank 0 (highest scheduling priority) are always dispatched before tasks with a higher rank value. Concrete
+ * subclasses implement {@link #handleDependencyFreeActions} to define how the effective rank is determined (pure
+ * task-rank or hint-assisted).
  */
 public abstract class RankBaseTS extends TaskScheduler {
 
@@ -50,20 +36,11 @@ public abstract class RankBaseTS extends TaskScheduler {
     /** Map from action to its current ObjectValue wrapper in the ready queue. */
     protected final Map<AllocatableAction, ObjectValue<AllocatableAction>> addedActions;
 
-    /**
-     * Actions deferred because a lower-ranked task has not yet been scheduled. Maps each deferred action to the
-     * timestamp (ms) at which it was deferred; used by {@link RankSchedulingOptimizer} to enforce the starvation
-     * timeout.
-     */
-    protected Map<AllocatableAction, Long> deferredActions = new ConcurrentHashMap<>();
 
     /**
-     * Set to {@code true} by {@link #handleDependencyFreeActions} whenever at least one action is added to
-     * {@code deferredActions}, signalling the optimizer that the map is non-empty.
+     * Returns the log-line prefix used by this scheduler variant (e.g. {@code "[RankTS]"}). Implemented by concrete
+     * subclasses to distinguish log output.
      */
-    protected volatile boolean deferredDirty = false;
-
-
     protected abstract String getLoggerPrefix();
 
     // -------------------------------------------------------------------------
@@ -197,6 +174,28 @@ public abstract class RankBaseTS extends TaskScheduler {
         readyQueue.add(obj);
     }
 
+    /**
+     * Returns a new {@link Score} derived from the base score of {@code action} but with {@code priority} set to
+     * {@code Integer.MAX_VALUE - rank}.
+     *
+     * @param action The action for which to compute the score.
+     * @return A new {@link Score} with rank-derived priority.
+     */
+    public Score generateActionScore(AllocatableAction action) {
+        int rank = 0;
+        if (action instanceof ExecutionAction) {
+            rank = ((ExecutionAction) action).getTask().getRank();
+            LOGGER.debug(getLoggerPrefix() + " Generating Score with rank " + rank + " from " + action);
+        }
+        long priority = (long) Integer.MAX_VALUE - rank;
+        return new Score(priority, action.getGroupPriority(), 0, 0, 0);
+    }
+
+    public Score generateActionScore(AllocatableAction action, int rank) {
+        long priority = (long) Integer.MAX_VALUE - rank;
+        return new Score(priority, action.getGroupPriority(), 0, 0, 0);
+    }
+
     // -------------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------------
@@ -213,16 +212,5 @@ public abstract class RankBaseTS extends TaskScheduler {
         throws BlockedActionException, UnassignedActionException {
         aa.schedule(score);
         tryToLaunch(aa);
-    }
-
-    /**
-     * Returns a new {@link RankSchedulingOptimizer} bound to this scheduler instance.
-     *
-     * @return A freshly created {@link RankSchedulingOptimizer}.
-     */
-    @Override
-    @SuppressWarnings("unchecked")
-    public RankSchedulingOptimizer generateSchedulingOptimizer() {
-        return new RankSchedulingOptimizer(this);
     }
 }
