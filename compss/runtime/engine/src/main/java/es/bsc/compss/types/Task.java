@@ -155,13 +155,6 @@ public class Task extends AbstractTask {
     }
 
     /**
-     * Set the task rank.
-     */
-    public int setRank(int rank) {
-        this.rank = rank;
-    }
-
-    /**
      * Get the task rank.
      */
     public int getRank() {
