@@ -16,13 +16,7 @@
  */
 package es.bsc.compss.scheduler.rank.rank;
 
-import es.bsc.compss.comm.Comm;
-import es.bsc.compss.components.impl.ResourceScheduler;
 import es.bsc.compss.scheduler.rank.base.RankBaseRS;
-import es.bsc.compss.scheduler.types.AllocatableAction;
-import es.bsc.compss.scheduler.types.Score;
-import es.bsc.compss.types.TaskDescription;
-import es.bsc.compss.types.implementations.Implementation;
 import es.bsc.compss.types.resources.Worker;
 import es.bsc.compss.types.resources.WorkerResourceDescription;
 

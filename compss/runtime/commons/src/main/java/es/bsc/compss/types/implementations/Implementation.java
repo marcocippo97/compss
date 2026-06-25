@@ -39,6 +39,8 @@ public abstract class Implementation implements Externalizable {
     protected ImplementationDescription<? extends WorkerResourceDescription,
         ? extends ImplementationDefinition> implDescription;
 
+    public static final String priorityImplSuffix = ".priority";
+
 
     /**
      * Creates a new Implementation instance for serialization.

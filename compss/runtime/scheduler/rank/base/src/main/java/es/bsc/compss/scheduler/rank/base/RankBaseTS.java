@@ -9,6 +9,7 @@ import es.bsc.compss.scheduler.types.AllocatableAction;
 import es.bsc.compss.scheduler.types.ObjectValue;
 import es.bsc.compss.scheduler.types.Score;
 import es.bsc.compss.types.allocatableactions.ExecutionAction;
+import es.bsc.compss.types.resources.Worker;
 import es.bsc.compss.types.resources.WorkerResourceDescription;
 
 import java.util.HashMap;
@@ -16,6 +17,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+
+import org.json.JSONObject;
 
 
 /**

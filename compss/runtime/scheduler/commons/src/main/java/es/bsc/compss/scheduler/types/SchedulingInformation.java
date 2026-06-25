@@ -47,6 +47,9 @@ public class SchedulingInformation {
 
     private Map<Resource, Double> perResourceScore;
 
+    // Prioritized implementation name for this action
+    private String prioritizedImpl = "none";
+
     static {
         CORE_TO_WORKERS = new ArrayList<>();
     }
@@ -194,4 +197,22 @@ public class SchedulingInformation {
         }
     }
 
+    /**
+     * Get the prioritized implementation.
+     *
+     * @return The prioritized implementation name.
+     * @throws Exception if no prioritized implementation has been set.
+     */
+    public String getPrioritizedImpl() {
+        return this.prioritizedImpl;
+    }
+
+    /**
+     * Set the prioritized implementation.
+     *
+     * @param implName The implementation name to prioritize.
+     */
+    public void setPrioritizedImpl(String implName) {
+        this.prioritizedImpl = implName;
+    }
 }

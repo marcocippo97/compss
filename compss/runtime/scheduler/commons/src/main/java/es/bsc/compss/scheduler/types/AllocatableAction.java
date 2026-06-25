@@ -25,6 +25,7 @@ import es.bsc.compss.scheduler.exceptions.FailedActionException;
 import es.bsc.compss.scheduler.exceptions.InvalidSchedulingException;
 import es.bsc.compss.scheduler.exceptions.UnassignedActionException;
 import es.bsc.compss.scheduler.types.ActionGroup.MutexGroup;
+import es.bsc.compss.types.CoreElement;
 import es.bsc.compss.types.annotations.parameter.OnFailure;
 import es.bsc.compss.types.implementations.Implementation;
 import es.bsc.compss.types.resources.Worker;

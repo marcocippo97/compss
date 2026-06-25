@@ -605,6 +605,10 @@ public class ExecutionAction extends AllocatableAction implements JobListener<Pa
         return this.task.getTaskDescription().getCoreElement().getCoreId();
     }
 
+    public final CoreElement getCoreElement() {
+        return this.task.getTaskDescription().getCoreElement();
+    }
+
     @Override
     public final int getPriority() {
         return this.task.getTaskDescription().hasPriority() ? 1 : 0;

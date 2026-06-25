@@ -14,11 +14,10 @@
  *  limitations under the License.
  *
  */
-package es.bsc.compss.scheduler.prediction.base;
+package es.bsc.compss.scheduler.rank.prediction;
 
-import es.bsc.compss.comm.Comm;
-import es.bsc.compss.components.impl.ResourceScheduler;
 import es.bsc.compss.scheduler.rank.base.RankBaseRS;
+import es.bsc.compss.scheduler.rank.prediction.types.SuccessorHint;
 import es.bsc.compss.scheduler.types.AllocatableAction;
 import es.bsc.compss.scheduler.types.Score;
 import es.bsc.compss.types.TaskDescription;
@@ -49,4 +48,36 @@ public class PredictionRS<T extends WorkerResourceDescription> extends RankBaseR
     public PredictionRS(Worker<T> w, JSONObject resJSON, JSONObject implJSON) {
         super(w, resJSON, implJSON);
     }
+
+    @Override
+    public Score generateImplementationScore(AllocatableAction action, TaskDescription params, Implementation impl,
+        Score resourceScore) {
+        long priority = resourceScore.getPriority();
+        long groupId = action.getGroupPriority();
+        long resource = resourceScore.getResourceScore();
+
+        if (!this.myWorker.canRunNow((T) impl.getRequirements())) {
+            return null;
+        }
+        // Check if there is a prioritized implementation
+        long implScore;
+        String implSig = impl.getSignature();
+        if (implSig.contains(Implementation.priorityImplSuffix)) {
+            if (action.getSchedulingInfo().getPrioritizedImpl() == implSig) {
+                implScore = Integer.MAX_VALUE;
+            } else {
+                implScore = -Integer.MAX_VALUE;
+            }
+        } else {
+            implScore = -this.getProfile(impl).getAverageExecutionTime();
+        }
+        long waitingScore = resourceScore.getWaitingScore();
+
+        return new Score(priority, groupId, resource, waitingScore, implScore);
+    }
+
+    public void updateCoreElements() {
+        this.myWorker.updatedCoreElements(getExecutableCores());
+    }
+
 }

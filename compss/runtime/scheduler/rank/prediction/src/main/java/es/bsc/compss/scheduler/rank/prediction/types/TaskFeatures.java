@@ -1,20 +1,4 @@
-/*
- *  Copyright 2002-2025 Barcelona Supercomputing Center (www.bsc.es)
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- */
-package es.bsc.compss.scheduler.rank.prediction;
+package es.bsc.compss.scheduler.rank.prediction.types;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -22,7 +6,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.TreeSet;
 
 
@@ -105,17 +88,19 @@ public class TaskFeatures {
      * @return Hex-encoded SHA-256 digest string.
      */
     public String categoricalHash() {
-        String sorted = new TreeSet(categoricalFeatures.keySet()).toString();
+        StringBuilder sb = new StringBuilder();
+        for (String key : new TreeSet<>(categoricalFeatures.keySet())) {
+            sb.append(key).append("=").append(categoricalFeatures.get(key)).append(";");
+        }
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(sorted.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(hash.length * 2);
+            byte[] hash = md.digest(sb.toString().getBytes(StandardCharsets.UTF_8));
+            StringBuilder result = new StringBuilder(hash.length * 2);
             for (byte b : hash) {
-                sb.append(String.format("%02x", b));
+                result.append(String.format("%02x", b));
             }
-            return sb.toString();
+            return result.toString();
         } catch (NoSuchAlgorithmException e) {
-            // SHA-256 is guaranteed to be available in all JVMs.
             throw new RuntimeException("SHA-256 not available", e);
         }
     }

@@ -38,6 +38,12 @@
 			<version>${project.version}</version>
 		</dependency>
 
+		<dependency>
+			<groupId>es.bsc.compss</groupId>
+			<artifactId>compss-commons</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
 		<!-- JSON -->
 		<dependency>
 			<groupId>org.json</groupId>
