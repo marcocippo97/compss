@@ -149,6 +149,7 @@ SUPPORTED_ARGUMENTS = {
     LABELS.numba_declaration,
     LABELS.varargs_type,
     LABELS.config_file,
+    LABELS.rank
 }  # type: typing.Set[str]
 # Deprecated arguments. Still supported but shows a message when used.
 DEPRECATED_ARGUMENTS = {
@@ -283,6 +284,10 @@ class TaskMaster:
             # parameter name.
             with EventMaster(TRACING_MASTER.inspect_constraints):
                 self.inspect_constraints(args, kwargs)
+
+            #TODO check task dynamic constraints
+            # with EventMaster(TRACING_MASTER.inspect_constraints):
+            self.inspect_task_arguments(args, kwargs)
 
             # Compute the function path, class (if any), and name
             with EventMaster(TRACING_MASTER.get_function_information):
@@ -532,6 +537,7 @@ class TaskMaster:
                         and key != "memorySize"
                         and key != "storage_size"
                         and key != "storageSize"
+                        and key != "processors"
                     )
                 ):
                     if __debug__:
@@ -626,6 +632,72 @@ class TaskMaster:
                                 )
 
             self.core_element.set_impl_constraints(constraints)
+
+
+    def inspect_task_arguments(self, args: tuple, kwargs: dict) -> None:
+        """TODO check task arguments to see if they are dynamic
+        """
+        new_task_arguments = dict()
+        for key in self.decorator_arguments.get_keys():
+            value = getattr(self.decorator_arguments, key)
+            if (
+                isinstance(value, int)
+                or (isinstance(value, str) and value.isdigit())
+                or (isinstance(value, str) and value.startswith("$"))
+                or (
+                    key != "priority"
+                    #TODO to be updated
+                )
+            ):
+                continue
+            elif value in kwargs:
+                if __debug__:
+                    logger.debug(
+                        "Detected dynamic task argument passed as a dict"
+                    )
+                new_task_arguments[key] = kwargs[value]
+            elif value in self.param_args:
+                if __debug__:
+                    logger.debug(
+                        "Detected dynamic task argument passed as a value"
+                    )
+                index = self.param_args.index(value)
+                new_task_arguments[key] = args[index]
+            elif value in self.user_function.__globals__:
+                if __debug__:
+                    logger.debug(
+                        "Detected dynamic task argument passed as a global variable"
+                    )
+                new_task_arguments[key] = int(
+                    self.user_function.__globals__[value]
+                )
+            else:
+                try:
+                    args_dict = {
+                        self.param_args[i]: args[i]
+                        for i in range(len(self.param_args))
+                    }
+                except IndexError:
+                    args_dict = kwargs
+                else:
+                    args_dict.update(kwargs)
+                try:
+                    new_task_arguments[key] = int(
+                        eval(value, {"__builtins__": {}}, args_dict)
+                    )
+                    self.constraint_args[key].set_is_static(False)
+                    if __debug__:
+                        logger.debug(
+                            "Detected dynamic task argument as an expression"
+                        )
+                except NameError:
+                    if __debug__:
+                        logger.debug(
+                            "Parameter not found, treating value %s as "
+                            "static string" % value
+                        )
+        self.decorator_arguments.update_arguments(new_task_arguments)
+
 
     def check_if_interactive(self) -> typing.Tuple[bool, types.ModuleType]:
         """Check if running in interactive mode.

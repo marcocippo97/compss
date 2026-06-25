@@ -139,6 +139,10 @@ class Constraint:  # pylint: disable=too-few-public-methods
             # Instantiate a new core element object, update it and include
             # it into kwarg
             core_element = CE()
+            # replace decorator arguments with called function arguments
+            for key in set(self.kwargs.keys()).intersection(kwargs.keys()):
+                self.kwargs[key] = kwargs[key]
+
             core_element.set_impl_constraints(self.kwargs)
             core_element.set_impl_local(is_local)
             kwargs[CORE_ELEMENT_KEY] = core_element
