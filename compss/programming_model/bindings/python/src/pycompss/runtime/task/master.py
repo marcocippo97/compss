@@ -1357,11 +1357,23 @@ class TaskMaster:
                 if key.__contains__("_"):
                     impl_signature += key.split("_", 1)[0][:1]
                     impl_signature += key.split("_", 1)[1][:1]
+                    impl_signature += str(value)
+                elif key == "processors":
+                    assert isinstance(value, list), "'processors' constraint must be of type list"
+                    for proc in value:
+                        proc_type = proc.get("processorType") # type: ignore
+                        proc_units = proc.get("computingUnits") # type: ignore
+                        if proc_type and proc_units:
+                            impl_signature += "." if not impl_signature.endswith(".") else ""
+                            impl_signature += f"{proc_type.lower()}.{proc_units}"
+                        else:
+                            logger.warning(f"'processors' constraint element {proc}"
+                                "has no keys 'processorType' and/or 'computingUnits'")
                 else:
                     upper_letter = re.findall("[A-Z]+", key) #TODO why?
                     impl_signature += key[:1]
                     impl_signature += upper_letter[0][:1]
-                impl_signature += str(value)
+                    impl_signature += str(value)
         return impl_signature, impl_type_args
 
     def update_core_element(
