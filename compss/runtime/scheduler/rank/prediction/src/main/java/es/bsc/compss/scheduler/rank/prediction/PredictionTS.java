@@ -433,10 +433,11 @@ public class PredictionTS extends RankBaseTS {
                             LOGGER.debug(getLoggerPrefix() + " New priority implementation added: " + newSig);
                         }
                         freeAction.getSchedulingInfo().setPrioritizedImpl(newSig);
+                        ((ExecutionAction) freeAction).setPriority(Integer.MAX_VALUE - rank);
                     }
                 }
             }
-            Score actionScore = generateActionScore(freeAction, rank);
+            Score actionScore = generateActionScore(freeAction);
             executableActions.add(new ObjectValue<>(freeAction, actionScore));
         }
 

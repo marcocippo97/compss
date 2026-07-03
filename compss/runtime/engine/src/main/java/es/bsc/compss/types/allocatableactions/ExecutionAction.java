@@ -614,6 +614,10 @@ public class ExecutionAction extends AllocatableAction implements JobListener<Pa
         return this.task.getTaskDescription().getPriority();
     }
 
+    public final void setPriority(int priority) {
+        this.task.getTaskDescription().setPriority(priority);
+    }
+
     @Override
     public long getGroupPriority() {
         return ACTION_SINGLE;

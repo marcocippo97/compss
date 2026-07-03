@@ -33,7 +33,7 @@ public class TaskDescription<P extends Parameter> {
     private final String signature;
     private final CoreElement coreElement;
 
-    private final int priority;
+    private int priority;
     private final boolean reduction;
     private final int numNodes;
     private final boolean mustReplicate;
@@ -145,6 +145,13 @@ public class TaskDescription<P extends Parameter> {
      */
     public int getPriority() {
         return this.priority;
+    }
+
+    /**
+     * Set the priority of the task.
+     */
+    public void setPriority(int priority) {
+        this.priority = priority;
     }
 
     /**
