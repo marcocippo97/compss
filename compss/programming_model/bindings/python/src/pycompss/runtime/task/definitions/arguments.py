@@ -79,7 +79,7 @@ class TaskArguments:
         self.target_direction = parameter.INOUT.key
         self.returns = False  # type: typing.Any
         self.cache_returns = True
-        self.priority = False
+        self.priority = 0
         self.defaults = {}  # type: typing.Dict[str, typing.Any]
         self.time_out = 0
         self.is_replicated = False

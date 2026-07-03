@@ -76,7 +76,7 @@ public class Task extends AbstractTask {
     private int rank;
 
 
-    private Task(Application app, TaskMonitor monitor, TaskType type, Lang lang, String signature, boolean isPrioritary,
+    private Task(Application app, TaskMonitor monitor, TaskType type, Lang lang, String signature, int priority,
         int numNodes, boolean isReduction, boolean isReplicated, boolean isDistributed, OnFailure onFailure,
         long timeOut, boolean hasTarget, int numReturns, List<Parameter> parameters, int rank) {
         super(app, nextTaskId.getAndIncrement());
@@ -87,8 +87,8 @@ public class Task extends AbstractTask {
 
         CoreElement core = CoreManager.getCore(signature);
         String parallelismSource = app.getParallelismSource();
-        this.taskDescription = new TaskDescription<>(type, lang, signature, core, parallelismSource, isPrioritary,
-            numNodes, isReduction, isReplicated, isDistributed, hasTarget, numReturns, onFailure, timeOut, parameters);
+        this.taskDescription = new TaskDescription<>(type, lang, signature, core, parallelismSource, priority, numNodes,
+            isReduction, isReplicated, isDistributed, hasTarget, numReturns, onFailure, timeOut, parameters);
         this.submitted = false;
     }
 
@@ -98,7 +98,7 @@ public class Task extends AbstractTask {
      * @param app Application to which the task belongs.
      * @param lang Application language.
      * @param signature Task signature.
-     * @param isPrioritary Whether the task has priority or not.
+     * @param priority The priority of the task.
      * @param numNodes Number of nodes used by the task.
      * @param isReduction Whether the task must be replicated or not.
      * @param isReplicated Whether the task must be replicated or not.
@@ -111,7 +111,7 @@ public class Task extends AbstractTask {
      * @param timeOut Time for a task time out.
      * @param rank Rank for the scheduler.
      */
-    public Task(Application app, Lang lang, String signature, boolean isPrioritary, int numNodes, boolean isReduction,
+    public Task(Application app, Lang lang, String signature, int priority, int numNodes, boolean isReduction,
         boolean isReplicated, boolean isDistributed, boolean hasTarget, int numReturns, List<Parameter> parameters,
         TaskMonitor monitor, OnFailure onFailure, long timeOut, int rank) {
 
@@ -121,7 +121,7 @@ public class Task extends AbstractTask {
             // Signature
             signature,
             // Scheduler hints
-            isPrioritary, numNodes, isReduction, isReplicated, isDistributed, onFailure, timeOut,
+            priority, numNodes, isReduction, isReplicated, isDistributed, onFailure, timeOut,
             // Parameters
             hasTarget, numReturns, parameters, rank);
 
@@ -132,14 +132,14 @@ public class Task extends AbstractTask {
      *
      * @param app Application.
      * @param monitor Task monitor.
-     * @param isPrioritary Whether the task has priority or not.
+     * @param priority The priority of the task.
      * @param hasTarget Whether the task has a target object or not.
      * @param numReturns Number of returns of the task.
      * @param parameters Task parameters.
      * @param onFailure OnFailure mechanisms.
      * @param timeOut Time for a task timeOut.
      */
-    public Task(Application app, String declareMethodFullyQualifiedName, boolean isPrioritary, boolean hasTarget,
+    public Task(Application app, String declareMethodFullyQualifiedName, int priority, boolean hasTarget,
         int numReturns, List<Parameter> parameters, TaskMonitor monitor, OnFailure onFailure, long timeOut, int rank) {
 
         this(app, monitor,
@@ -148,7 +148,7 @@ public class Task extends AbstractTask {
             // Signature
             SignatureBuilder.getHTTPSignature(declareMethodFullyQualifiedName, hasTarget, numReturns, parameters),
             // Scheduler hints
-            isPrioritary, Constants.SINGLE_NODE, false, false, false, onFailure, timeOut,
+            priority, Constants.SINGLE_NODE, false, false, false, onFailure, timeOut,
             // Parameters
             hasTarget, numReturns, parameters, rank);
 

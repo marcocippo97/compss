@@ -334,15 +334,15 @@ void init_master_jni_types(ThreadStatus* status, jclass clsITimpl) {
     check_exception(status, "Cannot find getMasterWorkingDirectory method");
 
     // executeTask method - C binding
-    midExecute = status->localJniEnv->GetMethodID(clsITimpl, "executeTask", "(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;ZIZIZZZLjava/lang/Integer;I[Ljava/lang/Object;)I");
+    midExecute = status->localJniEnv->GetMethodID(clsITimpl, "executeTask", "(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;IIZIZZZLjava/lang/Integer;I[Ljava/lang/Object;)I");
     check_exception(status, "Cannot find executeTask C");
 
     // executeTask method - Python binding
-    midExecuteNew = status->localJniEnv->GetMethodID(clsITimpl, "executeTask", "(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;IZIZIZZZLjava/lang/Integer;II[Ljava/lang/Object;)I");
+    midExecuteNew = status->localJniEnv->GetMethodID(clsITimpl, "executeTask", "(Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;IIIZIZZZLjava/lang/Integer;II[Ljava/lang/Object;)I");
     check_exception(status, "Cannot find executeTask Python");
 
     // executeTask method - Http tasks
-    midExecuteHttp = status->localJniEnv->GetMethodID(clsITimpl, "executeTask", "(Ljava/lang/Long;Ljava/lang/String;ZIZIZZZILes/bsc/compss/types/annotations/parameter/OnFailure;I[Ljava/lang/Object;)I");
+    midExecuteHttp = status->localJniEnv->GetMethodID(clsITimpl, "executeTask", "(Ljava/lang/Long;Ljava/lang/String;IIZIZZZILes/bsc/compss/types/annotations/parameter/OnFailure;I[Ljava/lang/Object;)I");
     check_exception(status, "Cannot find executeTask HTTP");
 
     // barrier method
@@ -1123,9 +1123,6 @@ void JNI_ExecuteTaskNew(long appId, char* signature, char* onFailure, int timeou
     // Values to be passed to the JVM
     jobjectArray jobjOBJArr; /* array of Objects to be passed to executeTask */
 
-    bool _priority = false;
-    if (priority != 0) _priority = true;
-
     bool _replicated = false;
     if (replicated != 0) _replicated = true;
 
@@ -1159,7 +1156,7 @@ void JNI_ExecuteTaskNew(long appId, char* signature, char* onFailure, int timeou
                               status->localJniEnv->NewStringUTF(signature),
                               status->localJniEnv->NewStringUTF(onFailure),
                               timeout,
-                              _priority,
+                              priority,
                               numNodes,
                               _reduce,
                               reduceChunkSize,
@@ -1186,9 +1183,6 @@ void JNI_ExecuteHttpTask(long appId, char* signature, char* onFailure, int timeo
 
     // Values to be passed to the JVM
     jobjectArray jobjOBJArr; /* array of Objects to be passed to executeTask */
-
-    bool _priority = false;
-    if (priority != 0) _priority = true;
 
     bool _replicated = false;
     if (replicated != 0) _replicated = true;
@@ -1231,7 +1225,7 @@ void JNI_ExecuteHttpTask(long appId, char* signature, char* onFailure, int timeo
                               midExecuteHttp,
                               status->localJniEnv->NewObject(clsLong, midLongCon, (jlong) appId),
                               status->localJniEnv->NewStringUTF(signature), // declaring method
-                              _priority,
+                              priority,
                               numNodes,
                               _reduce,
                               reduceChunkSize,

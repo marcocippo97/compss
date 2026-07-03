@@ -179,19 +179,20 @@ public abstract class RankBaseTS extends TaskScheduler {
 
     /**
      * Returns a new {@link Score} derived from the base score of {@code action} but with {@code priority} set to
-     * {@code Integer.MAX_VALUE - rank}.
+     * {@code Integer.MAX_VALUE - rank}, if no priority was already assigned.
      *
      * @param action The action for which to compute the score.
      * @return A new {@link Score} with rank-derived priority.
      */
     public Score generateActionScore(AllocatableAction action) {
-        int rank = 0;
-        if (action instanceof ExecutionAction) {
-            rank = ((ExecutionAction) action).getTask().getRank();
+        int priority = action.getPriority();
+        if ((action instanceof ExecutionAction) && (priority == 0)) {
+            int rank = ((ExecutionAction) action).getTask().getRank();
             LOGGER.debug(getLoggerPrefix() + " Generating Score with rank " + rank + " from " + action);
+            return generateActionScore(action, rank);
+        } else {
+            return new Score(priority, action.getGroupPriority(), 0, 0, 0);
         }
-        long priority = (long) Integer.MAX_VALUE - rank;
-        return new Score(priority, action.getGroupPriority(), 0, 0, 0);
     }
 
     public Score generateActionScore(AllocatableAction action, int rank) {

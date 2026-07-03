@@ -33,7 +33,7 @@ public class TaskDescription<P extends Parameter> {
     private final String signature;
     private final CoreElement coreElement;
 
-    private final boolean priority;
+    private final int priority;
     private final boolean reduction;
     private final int numNodes;
     private final boolean mustReplicate;
@@ -55,7 +55,7 @@ public class TaskDescription<P extends Parameter> {
      * @param signature Method signature.
      * @param coreElement Core Element to execute.
      * @param parallelismSource Identifier of the interface to use for detecting parallelism within the invocation.
-     * @param isPrioritary Whether the method is prioritary or not.
+     * @param priority The priority of the task.
      * @param numNodes Number of nodes required for the method execution.
      * @param isReduction Whether the method is reduce or not.
      * @param isReplicated Whether the method is replicated or not.
@@ -67,7 +67,7 @@ public class TaskDescription<P extends Parameter> {
      * @param parameters Number of parameters.
      */
     public TaskDescription(TaskType type, Lang lang, String signature, CoreElement coreElement,
-        String parallelismSource, boolean isPrioritary, int numNodes, boolean isReduction, boolean isReplicated,
+        String parallelismSource, int priority, int numNodes, boolean isReduction, boolean isReplicated,
         boolean isDistributed, boolean hasTarget, int numReturns, OnFailure onFailure, long timeOut,
         List<P> parameters) {
 
@@ -77,7 +77,7 @@ public class TaskDescription<P extends Parameter> {
         this.coreElement = coreElement;
         this.parallelismSource = parallelismSource;
 
-        this.priority = isPrioritary;
+        this.priority = priority;
         this.numNodes = numNodes;
         this.reduction = isReduction;
         this.mustReplicate = isReplicated;
@@ -143,7 +143,7 @@ public class TaskDescription<P extends Parameter> {
      *
      * @return {@code true} if the priority flag is enabled, {@code false} otherwise.
      */
-    public boolean hasPriority() {
+    public int getPriority() {
         return this.priority;
     }
 

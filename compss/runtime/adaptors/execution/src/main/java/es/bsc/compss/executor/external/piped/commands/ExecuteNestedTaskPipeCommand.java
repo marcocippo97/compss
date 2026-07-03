@@ -53,7 +53,7 @@ public class ExecuteNestedTaskPipeCommand extends ExecuteNestedTaskExternalComma
         this.onFailure = command[3];
         this.timeout = Integer.parseInt(command[4]);
         this.methodName = command[5];
-        this.prioritary = Boolean.parseBoolean(command[6]);
+        this.priority = Integer.parseInt(command[6]);
         this.numNodes = Integer.parseInt(command[7]);
         this.reduce = Boolean.parseBoolean(command[8]);
         this.reduceChunkSize = Integer.parseInt(command[9]);
@@ -78,7 +78,7 @@ public class ExecuteNestedTaskPipeCommand extends ExecuteNestedTaskExternalComma
         this.signature = command[2];
         this.onFailure = command[3];
         this.timeout = Integer.parseInt(command[4]);
-        this.prioritary = Boolean.parseBoolean(command[5]);
+        this.priority = Integer.parseInt(command[5]);
         this.numNodes = Integer.parseInt(command[6]);
         this.reduce = Boolean.parseBoolean(command[7]);
         this.reduceChunkSize = Integer.parseInt(command[8]);

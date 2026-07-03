@@ -47,7 +47,7 @@ public class ExecuteNestedTaskExternalCommand implements ExternalCommand {
     protected EntryPoint entryPoint;
     protected String onFailure;
     protected int timeout;
-    protected boolean prioritary;
+    protected int priority;
     protected String signature;
     protected Object[] parameters;
     protected int parameterCount;
@@ -86,8 +86,8 @@ public class ExecuteNestedTaskExternalCommand implements ExternalCommand {
         return this.timeout;
     }
 
-    public boolean getPrioritary() {
-        return this.prioritary;
+    public int getPriority() {
+        return this.priority;
     }
 
     public boolean hasTarget() {

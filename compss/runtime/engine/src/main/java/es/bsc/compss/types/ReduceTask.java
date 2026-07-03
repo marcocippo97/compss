@@ -84,7 +84,7 @@ public class ReduceTask extends Task {
      * @param app Application to which the task belongs.
      * @param lang Application language.
      * @param signature Task signature.
-     * @param isPrioritary Whether the task has priority or not.
+     * @param priority Priority of the task.
      * @param numNodes Number of nodes used by the task.
      * @param reduceChunkSize Size of the chunks to execute the reduce.
      * @param isReduction Whether the task must be replicated or not.
@@ -97,12 +97,12 @@ public class ReduceTask extends Task {
      * @param onFailure On failure mechanisms.
      * @param timeOut Time for a task time out.
      */
-    public ReduceTask(Application app, Lang lang, String signature, boolean isPrioritary, int numNodes,
-        boolean isReduction, int reduceChunkSize, boolean isReplicated, boolean isDistributed, boolean hasTarget,
-        int numReturns, List<Parameter> parameters, TaskMonitor monitor, OnFailure onFailure, long timeOut, int rank) {
+    public ReduceTask(Application app, Lang lang, String signature, int priority, int numNodes, boolean isReduction,
+        int reduceChunkSize, boolean isReplicated, boolean isDistributed, boolean hasTarget, int numReturns,
+        List<Parameter> parameters, TaskMonitor monitor, OnFailure onFailure, long timeOut, int rank) {
 
-        super(app, lang, signature, isPrioritary, numNodes, isReduction, isReplicated, isDistributed, hasTarget,
-            numReturns, parameters, monitor, onFailure, timeOut, rank);
+        super(app, lang, signature, priority, numNodes, isReduction, isReplicated, isDistributed, hasTarget, numReturns,
+            parameters, monitor, onFailure, timeOut, rank);
         this.tasks = new LinkedList<>();
         this.chunkSize = reduceChunkSize;
         this.totalOperations = 0;

@@ -363,7 +363,7 @@ class COMPSsModule:  # pylint: disable=invalid-name, too-many-public-methods
         signature: str,
         on_failure: str,
         time_out: int,
-        has_priority: bool,
+        priority: int,
         num_nodes: int,
         reduction: bool,
         chunk_size: int,
@@ -388,7 +388,7 @@ class COMPSsModule:  # pylint: disable=invalid-name, too-many-public-methods
         :param signature: Task signature.
         :param on_failure: On failure action.
         :param time_out: Task time out.
-        :param has_priority: Boolean has priority.
+        :param priority: Integer priority.
         :param num_nodes: Number of nodes.
         :param reduction: Boolean indicating if the task is of type reduce.
         :param chunk_size: Size of chunks for executing the reduce operation.
@@ -413,7 +413,7 @@ class COMPSsModule:  # pylint: disable=invalid-name, too-many-public-methods
             signature,
             on_failure,
             time_out,
-            has_priority,
+            priority,
             num_nodes,
             reduction,
             chunk_size,
@@ -439,7 +439,7 @@ class COMPSsModule:  # pylint: disable=invalid-name, too-many-public-methods
         signature: str,
         on_failure: str,
         time_out: int,
-        has_priority: bool,
+        priority: int,
         num_nodes: int,
         reduction: bool,
         chunk_size: int,
@@ -463,7 +463,7 @@ class COMPSsModule:  # pylint: disable=invalid-name, too-many-public-methods
         :param signature: Task signature.
         :param on_failure: On failure action.
         :param time_out: Task time out.
-        :param has_priority: Boolean has priority.
+        :param priority: Integer priority.
         :param num_nodes: Number of nodes.
         :param reduction: Boolean indicating if the task is of type reduce.
         :param chunk_size: Size of chunks for executing the reduce operation.
@@ -487,7 +487,7 @@ class COMPSsModule:  # pylint: disable=invalid-name, too-many-public-methods
             signature,
             on_failure,
             time_out,
-            has_priority,
+            priority,
             num_nodes,
             reduction,
             chunk_size,

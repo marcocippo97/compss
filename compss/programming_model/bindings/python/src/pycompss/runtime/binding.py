@@ -888,7 +888,7 @@ def process_task(
     """
     with EventMaster(TRACING_MASTER.process_task_event):
         app_id = 0
-        has_priority = decorator_arguments.priority
+        priority = decorator_arguments.priority
         num_nodes = decorator_arguments.computing_nodes
         reduction = decorator_arguments.is_reduce
         chunk_size = decorator_arguments.chunk_size
@@ -921,7 +921,7 @@ def process_task(
             LOGGER.debug("\t- Content Types: %s", ct_str)
             LOGGER.debug("\t- Weights: %s", weights_str)
             LOGGER.debug("\t- Keep_renames: %s", keep_renames_str)
-            LOGGER.debug("\t- Priority: %s", str(has_priority))
+            LOGGER.debug("\t- Priority: %s", str(priority))
             LOGGER.debug("\t- Num nodes: %s", str(num_nodes))
             LOGGER.debug("\t- Reduce: %s", str(reduction))
             LOGGER.debug("\t- Chunk Size: %s", str(chunk_size))
@@ -959,7 +959,7 @@ def process_task(
         #
         #     3 - <String>    - function name of the task (to be called from
         #                       the worker)
-        #     4 - <String>    - priority flag (true|false)
+        #     4 - <String>    - priority integer value
         #
         #     5 - <String>    - has target (true|false). If the task is within
         #                       an object or not.
@@ -986,7 +986,7 @@ def process_task(
                 signature,
                 on_failure,
                 time_out,
-                has_priority,
+                priority,
                 num_nodes,
                 reduction,
                 chunk_size,
@@ -1011,7 +1011,7 @@ def process_task(
                 signature,
                 on_failure,
                 time_out,
-                has_priority,
+                priority,
                 num_nodes,
                 reduction,
                 chunk_size,

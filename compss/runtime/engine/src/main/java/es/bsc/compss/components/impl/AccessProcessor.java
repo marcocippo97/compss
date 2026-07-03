@@ -132,7 +132,7 @@ public class AccessProcessor extends RequestDispatcher<APRequest> implements Che
      * @param monitor Task monitor.
      * @param lang Application language.
      * @param signature Task signature.
-     * @param isPrioritary Whether the task has priority or not.
+     * @param priority Priority of the task.
      * @param numNodes Number of nodes.
      * @param isReduce Whether the task is of type reduce.
      * @param reduceChunkSize The size of the chunks to be reduced.
@@ -145,23 +145,23 @@ public class AccessProcessor extends RequestDispatcher<APRequest> implements Che
      * @param timeOut Time for a task timeOut.
      * @return Task Id.
      */
-    public int newTask(Application app, TaskMonitor monitor, Lang lang, String signature, boolean isPrioritary,
-        int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed,
-        boolean hasTarget, int numReturns, List<Parameter> parameters, OnFailure onFailure, long timeOut, int rank) {
+    public int newTask(Application app, TaskMonitor monitor, Lang lang, String signature, int priority, int numNodes,
+        boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed, boolean hasTarget,
+        int numReturns, List<Parameter> parameters, OnFailure onFailure, long timeOut, int rank) {
 
         Task currentTask;
 
         if (isReduce) {
             if (reduceChunkSize >= 2) {
-                currentTask = new ReduceTask(app, lang, signature, isPrioritary, numNodes, isReduce, reduceChunkSize,
+                currentTask = new ReduceTask(app, lang, signature, priority, numNodes, isReduce, reduceChunkSize,
                     isReplicated, isDistributed, hasTarget, numReturns, parameters, monitor, onFailure, timeOut, rank);
             } else {
                 ErrorManager.warn("Requesting to create task with chunk_size smaller than 2. Executing as simple task");
-                currentTask = new Task(app, lang, signature, isPrioritary, numNodes, isReduce, isReplicated,
-                    isDistributed, hasTarget, numReturns, parameters, monitor, onFailure, timeOut, rank);
+                currentTask = new Task(app, lang, signature, priority, numNodes, isReduce, isReplicated, isDistributed,
+                    hasTarget, numReturns, parameters, monitor, onFailure, timeOut, rank);
             }
         } else {
-            currentTask = new Task(app, lang, signature, isPrioritary, numNodes, isReduce, isReplicated, isDistributed,
+            currentTask = new Task(app, lang, signature, priority, numNodes, isReduce, isReplicated, isDistributed,
                 hasTarget, numReturns, parameters, monitor, onFailure, timeOut, rank);
         }
 
@@ -177,7 +177,7 @@ public class AccessProcessor extends RequestDispatcher<APRequest> implements Che
      *
      * @param app Application.
      * @param monitor Task monitor.
-     * @param priority Whether the task has priority or not.
+     * @param priority Priority of the task.
      * @param hasTarget Whether the task has a target object or not.
      * @param numReturns Number of returns of the task.
      * @param parameters Task parameters.
@@ -185,7 +185,7 @@ public class AccessProcessor extends RequestDispatcher<APRequest> implements Che
      * @param timeOut Time for a task timeOut.
      * @return Task Id.
      */
-    public int newTask(Application app, TaskMonitor monitor, String declareMethodFullyQualifiedName, boolean priority,
+    public int newTask(Application app, TaskMonitor monitor, String declareMethodFullyQualifiedName, int priority,
         boolean isReduce, int reduceChunkSize, boolean hasTarget, int numReturns, List<Parameter> parameters,
         OnFailure onFailure, long timeOut, int rank) {
 

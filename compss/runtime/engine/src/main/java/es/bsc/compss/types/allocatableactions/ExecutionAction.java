@@ -611,7 +611,7 @@ public class ExecutionAction extends AllocatableAction implements JobListener<Pa
 
     @Override
     public final int getPriority() {
-        return this.task.getTaskDescription().hasPriority() ? 1 : 0;
+        return this.task.getTaskDescription().getPriority();
     }
 
     @Override

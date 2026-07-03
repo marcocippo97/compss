@@ -401,7 +401,7 @@ public class ReduceExecutionAction extends ExecutionAction {
         t.setPartialInUsed(partialIn);
         taskP.add(result);
 
-        Task partialTask = new Task(this.task.getApplication(), td.getLang(), td.getName(), td.hasPriority(),
+        Task partialTask = new Task(this.task.getApplication(), td.getLang(), td.getName(), td.getPriority(),
             td.getNumNodes(), td.isReduction(), td.isReplicated(), td.isDistributed(), td.hasTargetObject(),
             td.getNumReturns(), taskP, this.task.getTaskMonitor(), td.getOnFailure(), td.getTimeOut(), 0);
         this.partialTaskIds.add(partialTask.getId());

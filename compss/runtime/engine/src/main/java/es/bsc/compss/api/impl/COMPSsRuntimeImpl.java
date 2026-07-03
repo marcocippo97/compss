@@ -1022,52 +1022,50 @@ public class COMPSsRuntimeImpl implements COMPSsRuntime, LoaderAPI, ErrorHandler
     // C
     @Override
     public int executeTask(Long appId, String methodClass, String onFailure, int timeOut, String methodName,
-        boolean isPrioritary, int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated,
-        boolean isDistributed, boolean hasTarget, Integer numReturns, int parameterCount, Object... parameters) {
+        int priority, int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed,
+        boolean hasTarget, Integer numReturns, int parameterCount, Object... parameters) {
 
         return executeTask(appId, Lang.C, false, methodClass, methodName, null, OnFailure.valueOf(onFailure), timeOut,
-            isPrioritary, Constants.SINGLE_NODE, false, 0, isReplicated, isDistributed, hasTarget, numReturns,
+            priority, Constants.SINGLE_NODE, false, 0, isReplicated, isDistributed, hasTarget, numReturns,
             parameterCount, 0, parameters);
     }
 
     // Python
     @Override
-    public int executeTask(Long appId, String signature, String onFailure, int timeOut, boolean isPrioritary,
-        int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed,
-        boolean hasTarget, Integer numReturns, int parameterCount, int rank, Object... parameters) {
+    public int executeTask(Long appId, String signature, String onFailure, int timeOut, int priority, int numNodes,
+        boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed, boolean hasTarget,
+        Integer numReturns, int parameterCount, int rank, Object... parameters) {
         Lang lang = Lang.PYTHON;
         if (DEFAULT_LANG == Lang.R) {
             lang = Lang.R;
         }
-        return executeTask(appId, lang, true, null, null, signature, OnFailure.valueOf(onFailure), timeOut,
-            isPrioritary, numNodes, isReduce, reduceChunkSize, isReplicated, isDistributed, hasTarget, numReturns,
-            parameterCount, rank, parameters);
+        return executeTask(appId, lang, true, null, null, signature, OnFailure.valueOf(onFailure), timeOut, priority,
+            numNodes, isReduce, reduceChunkSize, isReplicated, isDistributed, hasTarget, numReturns, parameterCount,
+            rank, parameters);
     }
 
     // Java - Loader
     @Override
-    public int executeTask(Long appId, Lang lang, String methodClass, String methodName, boolean isPrioritary,
-        int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed,
-        boolean hasTarget, int parameterCount, OnFailure onFailure, int timeOut, Object... parameters) {
+    public int executeTask(Long appId, Lang lang, String methodClass, String methodName, int priority, int numNodes,
+        boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed, boolean hasTarget,
+        int parameterCount, OnFailure onFailure, int timeOut, Object... parameters) {
 
-        return executeTask(appId, lang, false, methodClass, methodName, null, onFailure, timeOut, isPrioritary,
-            numNodes, isReduce, reduceChunkSize, isReplicated, isDistributed, hasTarget, null, parameterCount, 0,
-            parameters);
+        return executeTask(appId, lang, false, methodClass, methodName, null, onFailure, timeOut, priority, numNodes,
+            isReduce, reduceChunkSize, isReplicated, isDistributed, hasTarget, null, parameterCount, 0, parameters);
     }
 
     // Services
     @Override
-    public int executeTask(Long appId, String namespace, String service, String port, String operation,
-        boolean isPrioritary, int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated,
-        boolean isDistributed, boolean hasTarget, int parameterCount, OnFailure onFailure, int timeOut,
-        Object... parameters) {
+    public int executeTask(Long appId, String namespace, String service, String port, String operation, int priority,
+        int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed,
+        boolean hasTarget, int parameterCount, OnFailure onFailure, int timeOut, Object... parameters) {
         throw new UnsupportedOperationException();
     }
 
     // HTTP
     // This function is called dynamically by Javassist (you will not find direct calls in the Java project)
     @Override
-    public int executeTask(Long appId, String methodFQN, boolean isPrioritary, int numNodes, boolean isReduce,
+    public int executeTask(Long appId, String methodFQN, int priority, int numNodes, boolean isReduce,
         int reduceChunkSize, boolean isReplicated, boolean isDistributed, boolean hasTarget, int parameterCount,
         OnFailure onFailure, int timeOut, Object... parameters) {
 
@@ -1091,8 +1089,8 @@ public class COMPSsRuntimeImpl implements COMPSsRuntime, LoaderAPI, ErrorHandler
             int numReturns = hasReturn ? 1 : 0;
 
             // Register the task
-            int task = ap.newTask(app, monitor, methodFQN, isPrioritary, isReduce, reduceChunkSize, hasTarget,
-                numReturns, pars, onFailure, timeOut, 0);
+            int task = ap.newTask(app, monitor, methodFQN, priority, isReduce, reduceChunkSize, hasTarget, numReturns,
+                pars, onFailure, timeOut, 0);
 
             for (Parameter p : pars) {
                 if (p.getDirection().equals(Direction.IN_DELETE)) {
@@ -1115,7 +1113,7 @@ public class COMPSsRuntimeImpl implements COMPSsRuntime, LoaderAPI, ErrorHandler
      * @param signature Method signature.
      * @param onFailure On failure behavior.
      * @param timeOut Amount of time for an application time out.
-     * @param isPrioritary Whether the task has priority or not.
+     * @param priority Whether the task has priority or not.
      * @param numNodes Number of associated nodes.
      * @param isReduce Whether it is a reduce task.
      * @param reduceChunkSize The size of the chunks to be reduced.
@@ -1129,7 +1127,7 @@ public class COMPSsRuntimeImpl implements COMPSsRuntime, LoaderAPI, ErrorHandler
      * @return The task id.
      */
     public int executeTask(Long appId, Lang lang, boolean hasSignature, String methodClass, String methodName,
-        String signature, OnFailure onFailure, int timeOut, boolean isPrioritary, int numNodes, boolean isReduce,
+        String signature, OnFailure onFailure, int timeOut, int priority, int numNodes, boolean isReduce,
         int reduceChunkSize, boolean isReplicated, boolean isDistributed, boolean hasTarget, Integer numReturns,
         int parameterCount, int rank, Object... parameters) {
         // Tracing flag for task creation
@@ -1166,7 +1164,7 @@ public class COMPSsRuntimeImpl implements COMPSsRuntime, LoaderAPI, ErrorHandler
                 fLang = DEFAULT_LANG;
             }
 
-            int task = ap.newTask(app, monitor, fLang, fSign, isPrioritary, numNodes, isReduce, reduceChunkSize,
+            int task = ap.newTask(app, monitor, fLang, fSign, priority, numNodes, isReduce, reduceChunkSize,
                 isReplicated, isDistributed, hasTarget, nReturns, pars, onFailure, timeOut, rank);
 
             if (DP_ENABLED) {

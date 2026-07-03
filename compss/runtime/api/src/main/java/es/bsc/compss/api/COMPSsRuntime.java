@@ -139,7 +139,7 @@ public interface COMPSsRuntime {
      * @param onFailure On task failure behavior.
      * @param timeOut Amount of time for an application time out.
      * @param methodName The method name.
-     * @param isPrioritary Whether the task is set as prioritary or not.
+     * @param priority Whether the task is set as prioritary or not.
      * @param numNodes The number of nodes required to execute the task.
      * @param isReduce Whether the task is of type reduce.
      * @param reduceChunkSize The chunk size set for executing a reduce operation.
@@ -152,8 +152,8 @@ public interface COMPSsRuntime {
      * @return
      */
     public int executeTask(Long appId, String methodClass, String onFailure, int timeOut, String methodName,
-        boolean isPrioritary, int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated,
-        boolean isDistributed, boolean hasTarget, Integer numReturns, int parameterCount, Object... parameters);
+        int priority, int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed,
+        boolean hasTarget, Integer numReturns, int parameterCount, Object... parameters);
 
     /**
      * New Method task for Python Binding.
@@ -162,7 +162,7 @@ public interface COMPSsRuntime {
      * @param signature The method signature.
      * @param onFailure On task failure behavior.
      * @param timeOut Amount of time for an application time out.
-     * @param isPrioritary Whether the task is set as prioritary or not.
+     * @param priority Priority of the task.
      * @param numNodes The number of nodes required to execute the task.
      * @param isReduce Whether the task is of type reduce.
      * @param reduceChunkSize The chunk size set for executing a reduce operation.
@@ -175,9 +175,9 @@ public interface COMPSsRuntime {
      * @param parameters An object array containing the method parameters.
      * @return
      */
-    public int executeTask(Long appId, String signature, String onFailure, int timeOut, boolean isPrioritary,
-        int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed,
-        boolean hasTarget, Integer numReturns, int parameterCount, int rank, Object... parameters);
+    public int executeTask(Long appId, String signature, String onFailure, int timeOut, int priority, int numNodes,
+        boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed, boolean hasTarget,
+        Integer numReturns, int parameterCount, int rank, Object... parameters);
 
     /**
      * New Method Task for Loader.
@@ -186,7 +186,7 @@ public interface COMPSsRuntime {
      * @param lang The application language.
      * @param methodClass The method class.
      * @param methodName The method name.
-     * @param isPrioritary Whether the task is set as prioritary or not.
+     * @param priority Priority of the task.
      * @param numNodes The number of nodes required to execute the task.
      * @param isReduce Whether the task is of type reduce.
      * @param reduceChunkSize The chunk size set for executing a reduce operation.
@@ -199,9 +199,9 @@ public interface COMPSsRuntime {
      * @param parameters An object array containing the method parameters.
      * @return
      */
-    public int executeTask(Long appId, Lang lang, String methodClass, String methodName, boolean isPrioritary,
-        int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed,
-        boolean hasTarget, int parameterCount, OnFailure onFailure, int timeOut, Object... parameters);
+    public int executeTask(Long appId, Lang lang, String methodClass, String methodName, int priority, int numNodes,
+        boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed, boolean hasTarget,
+        int parameterCount, OnFailure onFailure, int timeOut, Object... parameters);
 
     /**
      * New service task.
@@ -211,7 +211,7 @@ public interface COMPSsRuntime {
      * @param service The service endpoint.
      * @param port The service port.
      * @param operation The service operation.
-     * @param isPrioritary Whether the task is set as prioritary or not.
+     * @param priority Whether the task is set as prioritary or not.
      * @param numNodes The number of nodes required to execute the task.
      * @param isReduce Whether the task is of type reduce.
      * @param reduceChunkSize The chunk size set for executing a reduce operation.
@@ -224,16 +224,15 @@ public interface COMPSsRuntime {
      * @param parameters An object array containing the method parameters.
      * @return
      */
-    public int executeTask(Long appId, String namespace, String service, String port, String operation,
-        boolean isPrioritary, int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated,
-        boolean isDistributed, boolean hasTarget, int parameterCount, OnFailure onFailure, int timeOut,
-        Object... parameters);
+    public int executeTask(Long appId, String namespace, String service, String port, String operation, int priority,
+        int numNodes, boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed,
+        boolean hasTarget, int parameterCount, OnFailure onFailure, int timeOut, Object... parameters);
 
     /**
      * New HTTP task.
      *
      * @param appId The application id.
-     * @param isPrioritary Whether the task is set as prioritary or not.
+     * @param priority Whether the task is set as prioritary or not.
      * @param numNodes The number of nodes required to execute the task.
      * @param isReduce Whether the task is of type reduce.
      * @param reduceChunkSize The chunk size set for executing a reduce operation.
@@ -246,7 +245,7 @@ public interface COMPSsRuntime {
      * @param parameters An object array containing the method parameters.
      * @return
      */
-    public int executeTask(Long appId, String declareMethodFullyQualifiedName, boolean isPrioritary, int numNodes,
+    public int executeTask(Long appId, String declareMethodFullyQualifiedName, int priority, int numNodes,
         boolean isReduce, int reduceChunkSize, boolean isReplicated, boolean isDistributed, boolean hasTarget,
         int parameterCount, OnFailure onFailure, int timeOut, Object... parameters);
 
